@@ -4,262 +4,410 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zettelkasten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>
-  /* ===== 색깔 정하기 (밝은 화면 / 어두운 화면) ===== */
+  /* 부산단디명조: 부산시 무료 서체. 자주 쓰는 한글 2,350자 + 영문·숫자·기호만 남기고, 장평을 103%로 넓힌 파일 */
+  @font-face { font-family: "Busan Dandi Myeongjo"; font-weight: 400 600; font-display: swap;
+    src: url("fonts/BusanDandiMyeongjo103-M.woff") format("woff"); }
+  @font-face { font-family: "Busan Dandi Myeongjo"; font-weight: 700 900; font-display: swap;
+    src: url("fonts/BusanDandiMyeongjo103-B.woff") format("woff"); }
+
+  /* ===== 색과 글꼴 ===== */
   :root {
-    --bg: #f7f6f3; --panel: #ffffff; --text: #22211f; --muted: #7a776f;
-    --line: #e4e1da; --accent: #2f6fde; --accent-soft: #e6eefc;
-    --danger: #c9372c; --missing: #c9372c; --hover: #f0eee9;
+    /* 종이결: 아주 옅은 입자 + 옅은 얼룩 */
+    --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .15  0 0 0 0 .12  0 0 0 0 .08  0 0 0 .045 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>"),
+             url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .2  0 0 0 0 .16  0 0 0 0 .1  0 0 0 .02 0'/></filter><rect width='100%' height='100%' filter='url(%23m)'/></svg>");
+
+    --bg: #FBFAF6;          /* 책상: 거의 흰색에 베이지 한 방울 */
+    --paper: #FFFFFF;       /* 메모 종이 */
+    --paper-2: #F2EFE8;     /* 뒤에 있는 탭 */
+    --all: #E8E3D8;         /* ALL 종이 */
+    --ink: #2A2621;         /* 먹색 글씨 */
+    --ink-soft: #6E665B;
+    --ink-btn: #4B463F;     /* 진한 버튼, 고른 메모 테두리 */
+    --edge: rgba(42, 38, 33, .18);
+    --shadow: 0 1px 1px rgba(60, 45, 25, .08), 0 4px 10px rgba(60, 45, 25, .08);
+    --sheet-shadow: drop-shadow(0 -1px 1px rgba(50, 38, 24, .22)) drop-shadow(0 -3px 5px rgba(50, 38, 24, .10));
+    --clay-text: #A0502F;   /* 링크 밑줄, 없는 메모, 지우기 글자 */
+    --ok: #586C4F;
+
+    /* 메모 종류 색 */
+    --fleeting: #F9EEDC;   --fleeting-ink: #4A4031;
+    --literature: #A55B3D; --literature-ink: #F6E9DC;
+    --permanent: #B6CAD2;  --permanent-ink: #2C3F47;
+    --index: #586C4F;      --index-ink: #F1EBDD;
+
+    /* 폴더 색 (채도 낮고 밝은 열한 가지) */
+    --f-sage: #D2DAC6; --f-olive: #DEDCBE; --f-moss: #C9D4BF;
+    --f-blue: #D0DDE3; --f-slate: #CED3DF; --f-lavender: #DCD7E6; --f-mauve: #E0D0D5;
+    --f-rose: #ECD9D3; --f-clay: #E7CDBF; --f-ochre: #EBDAB3; --f-sand: #EDE5D2;
+
+    --brand: "Special Elite", "Courier New", monospace;                          /* 로고 */
+    --en: "Courier Prime", "Courier New", monospace;                              /* 영어 메뉴, 날짜, 번호 */
+    --title: "Busan Dandi Myeongjo", "Gowun Batang", serif;                      /* 메모 제목, 폴더 이름 */
+    --sans: "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;   /* 본문 */
+    --title-spacing: .11em;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #1a1a19; --panel: #232322; --text: #ecebe7; --muted: #9a978f;
-      --line: #393835; --accent: #7aa7ff; --accent-soft: #2a3550;
-      --danger: #ff7b6e; --missing: #ff8f84; --hover: #2c2c2a;
-    }
-  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  html, body { height: 100%; }
+  body { margin: 0; background-color: var(--bg); background-image: var(--grain); color: var(--ink);
+    font-family: var(--sans); font-size: 15px; -webkit-font-smoothing: antialiased; }
   button, select, input, textarea { font: inherit; color: inherit; }
-  button { cursor: pointer; border: 1px solid var(--line); background: var(--panel);
-    border-radius: 8px; padding: 6px 12px; }
-  button:hover { background: var(--hover); }
-  .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-  .primary:hover { background: var(--accent); filter: brightness(1.1); }
-  .danger { color: var(--danger); }
-  .danger.armed { background: var(--danger); color: #fff; border-color: var(--danger); font-weight: 600; }
-  .muted { color: var(--muted); font-size: 13px; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+  .en { font-family: var(--en); font-weight: 700; letter-spacing: .08em; }
+  .mobile-only { display: none !important; }
 
-  /* ===== 화면 배치: 왼쪽 목록 + 오른쪽 메모 ===== */
-  /* minmax(0, …): 긴 글자가 있어도 칸이 화면보다 넓어지지 않게 해요 */
-  .app { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: 100vh; height: 100dvh; }
-  .sidebar { min-width: 0; background: var(--panel); border-right: 1px solid var(--line);
-    display: flex; flex-direction: column; gap: 10px; padding: 16px; min-height: 0; }
-  .brand { font-size: 18px; font-weight: 700; }
-  #search { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
-    border-radius: 8px; background: var(--bg); }
-  .filters { display: flex; flex-wrap: wrap; gap: 4px; }
-  .filters button { padding: 3px 9px; font-size: 13px; border-radius: 999px; }
-  .filters button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-  #list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
-  #list li { padding: 9px 10px; border-radius: 8px; cursor: pointer; }
-  #list li:hover { background: var(--hover); }
-  #list li.active { background: var(--accent-soft); }
-  #list .t { font-weight: 600; display: flex; gap: 6px; align-items: baseline; }
-  #list .t .tt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #list .t .meta { flex-shrink: 0; font-size: 11px; font-weight: 400; color: var(--muted); }
-  .sort-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-  .sort-row select { flex: 1; min-width: 0; padding: 3px 6px; font-size: 12px; }
-  #list .s { color: var(--muted); font-size: 12px; margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sidebar-foot { display: flex; gap: 6px; }
-  .sidebar-foot > * { flex: 1; text-align: center; font-size: 13px; }
-  .btn { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
-  .btn:hover { background: var(--hover); }
-  .sync { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted);
-    padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
-  .sync span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sync button { padding: 3px 9px; font-size: 12px; flex-shrink: 0; }
+  /* ===== 화면 배치 ===== */
+  .app { display: grid; grid-template-columns: 320px minmax(0, 1fr); height: 100vh; height: 100dvh; }
+  .sidebar { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 22px 16px 14px 22px;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .sidebar input { user-select: text; -webkit-user-select: text; }
+  .brand-row { display: flex; align-items: center; gap: 8px; margin: 0 2px 14px; }
+  .brand { flex: 1; font-family: var(--brand); font-size: 24px; letter-spacing: 1px; }
+  .side-new { font-family: var(--en); font-weight: 700; letter-spacing: .08em; font-size: 12px; padding: 6px 12px;
+    border: none; border-radius: 8px; background: var(--ink-btn); color: var(--bg); }
+  .search { width: 100%; padding: 9px 12px; border: 1px solid var(--edge); border-radius: 6px; outline: none;
+    background-color: var(--paper); background-image: var(--grain); font-family: var(--title); font-size: 13px;
+    letter-spacing: var(--title-spacing); margin-bottom: 30px; }
+  .search::placeholder { color: var(--ink-soft); }
+  .search:focus { border-color: var(--ink-btn); }
 
-  /* 폴더 */
-  #list .folder-head { display: flex; align-items: center; gap: 6px; font-weight: 600; padding: 7px 8px; }
-  #list .folder-head .arrow { width: 12px; color: var(--muted); font-size: 11px; flex-shrink: 0; }
-  #list .folder-head .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #list .folder-head .count { color: var(--muted); font-size: 12px; font-weight: 400; }
-  /* 폴더 버튼은 마우스를 올렸을 때만 나와서 자리를 차지해요 (안 그러면 깊은 폴더 이름이 잘려요) */
-  .f-actions { display: none; gap: 1px; flex-shrink: 0; }
-  #list .folder-head:hover .f-actions, #list .folder-head.arming .f-actions { display: flex; }
-  @media (hover: none) { .f-actions { display: flex; } .f-actions button { padding: 1px 3px; } }
-  .f-actions button { padding: 1px 5px; font-size: 12px; border-color: transparent; background: transparent; }
-  .f-actions button:hover { border-color: var(--line); background: var(--panel); }
-  .f-actions button.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
-  #list li.in-folder { padding-left: 30px; }
-  #list li.empty-folder { font-size: 12px; cursor: default; }
-  #list li.empty-folder:hover { background: none; }
-  #list li.new-folder { color: var(--muted); font-size: 13px; }
-  #list li.folder-edit { padding: 4px 6px; }
-  #list li.folder-edit:hover { background: none; }
-  .folder-input { width: 100%; padding: 5px 8px; border: 2px solid var(--accent); border-radius: 6px;
-    background: var(--panel); outline: none; }
-  #folderNew { width: 150px; }
-  #list li.drag-tip { font-size: 12px; cursor: default; padding-top: 2px; }
-  #list li.drag-tip:hover { background: none; }
+  /* ----- 겹쳐진 종이 탭 (메모 종류) ----- */
+  .stack { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding-top: 24px; }
+  .sheet { position: relative; height: 38px; flex-shrink: 0; border-radius: 4px 4px 0 0; cursor: pointer;
+    background-image: var(--grain); filter: var(--sheet-shadow); }
+  /* 다음 종이를 조금 겹쳐 올려서, 둥근 모서리 뒤로 앞 종이 색이 보이게 해요 */
+  #sheets .sheet + .sheet { margin-top: -6px; height: 44px; }
+  .sheet.big { margin-top: -6px; flex: 1; min-height: 160px; height: auto; display: flex; flex-direction: column;
+    padding: 16px 12px 8px; border-radius: 4px; cursor: default;
+    filter: var(--sheet-shadow) drop-shadow(0 4px 8px rgba(60, 45, 25, .08)); }
+  .sheet .tab { position: absolute; top: -24px; height: 24px; padding: 0 14px; display: flex; align-items: center; gap: 8px;
+    background: inherit; white-space: nowrap; font-family: var(--en); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+  /* 탭 양옆 어깨: 아래는 종이와, 위는 탭 윗면과 수평으로 만나는 S자 곡선 */
+  .sheet .tab::before, .sheet .tab::after { content: ''; position: absolute; top: 0; bottom: 0; width: 20px; background: inherit;
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+  .sheet .tab::before { left: -20px;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 24' preserveAspectRatio='none'><path d='M0 24C10 24 9 0 20 0V24Z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 24' preserveAspectRatio='none'><path d='M0 24C10 24 9 0 20 0V24Z'/></svg>"); }
+  .sheet .tab::after { right: -20px;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 24' preserveAspectRatio='none'><path d='M0 0C11 0 10 24 20 24H0Z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 24' preserveAspectRatio='none'><path d='M0 0C11 0 10 24 20 24H0Z'/></svg>"); }
+  .sheet .tab .n { opacity: .65; font-size: 11px; font-weight: 400; letter-spacing: .02em; }
+  .t-all { background-color: var(--all); color: var(--ink); }
+  .t-fleeting { background-color: var(--fleeting); color: var(--fleeting-ink); }
+  .t-literature { background-color: var(--literature); color: var(--literature-ink); }
+  .t-permanent { background-color: var(--permanent); color: var(--permanent-ink); }
+  .t-index { background-color: var(--index); color: var(--index-ink); }
+
+  .sort { display: flex; align-items: center; justify-content: space-between; font-size: 12px; opacity: .85; margin: 0 4px 10px; }
+  .sort select { background: transparent; border: none; border-bottom: 1px solid currentColor; font-size: 12px; padding: 2px 0; outline: none; }
+  .sort select option { color: var(--ink); }
+
+  /* ----- 목록 ----- */
+  #list { list-style: none; margin: 0 -6px; padding: 4px 6px 10px; overflow-y: auto; flex: 1; min-height: 0; }
+  /* 폴더: 탭이 달린 작은 종이 폴더 */
+  .folder-head { position: relative; margin: 16px 0 8px; padding: 9px 10px 9px 12px; border-radius: 0 6px 6px 6px;
+    background-image: var(--grain); box-shadow: var(--shadow); color: #2A2621; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .folder-head::before { content: ''; position: absolute; left: 0; top: -9px; width: 64px; height: 10px; background: inherit;
+    clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%); border-radius: 5px 0 0 0; }
+  .folder-head .arrow { font-size: 9px; opacity: .6; width: 10px; flex-shrink: 0; }
+  .folder-head .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
+  .folder-head .count { font-family: var(--en); font-size: 11px; opacity: .7; }
+  .swatch { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(42, 38, 33, .45); background: inherit;
+    padding: 0; flex-shrink: 0; }
+  /* 폴더 버튼은 마우스를 올렸을 때만 나와서 자리를 차지해요 */
+  .f-actions { display: none; gap: 2px; flex-shrink: 0; }
+  .folder-head:hover .f-actions, .folder-head.arming .f-actions { display: flex; }
+  @media (hover: none) { .f-actions { display: flex; } }
+  .f-actions button { font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: .05em; padding: 2px 5px;
+    border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; }
+  .f-actions button:hover { border-color: rgba(42, 38, 33, .3); background: rgba(255, 255, 255, .5); }
+  .f-actions button.armed { background: var(--clay-text); border-color: var(--clay-text); color: #fff; }
+  .c-sage { background-color: var(--f-sage); } .c-olive { background-color: var(--f-olive); }
+  .c-moss { background-color: var(--f-moss); } .c-blue { background-color: var(--f-blue); }
+  .c-slate { background-color: var(--f-slate); } .c-lavender { background-color: var(--f-lavender); }
+  .c-mauve { background-color: var(--f-mauve); } .c-rose { background-color: var(--f-rose); }
+  .c-clay { background-color: var(--f-clay); } .c-ochre { background-color: var(--f-ochre); }
+  .c-sand { background-color: var(--f-sand); }
+  .palette { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; margin: -2px 0 8px; border-radius: 6px; box-shadow: var(--shadow);
+    background-color: var(--paper); background-image: var(--grain); align-items: center; color: var(--ink-soft); font-size: 11px; }
+  .palette button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+  .palette button.on { border-color: var(--ink-btn); }
+
+  /* 메모 쪽지 */
+  .slip { position: relative; margin: 8px 0; padding: 9px 12px 10px; border-radius: 3px; box-shadow: var(--shadow); cursor: pointer;
+    background-color: var(--paper); background-image: var(--grain); color: var(--ink); border-left: 3px solid var(--k, transparent); }
+  .slip:hover { box-shadow: 0 1px 1px rgba(60, 45, 25, .1), 0 6px 14px rgba(60, 45, 25, .12); }
+  .slip.active { outline: 1.5px solid var(--ink-btn); outline-offset: -1.5px; }
+  .slip .row { display: flex; align-items: baseline; gap: 8px; }
+  .slip .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
+  .slip .title .untitled { color: var(--ink-soft); font-weight: 400; }
+  .slip .meta { font-family: var(--en); font-size: 11px; color: var(--ink-soft); flex-shrink: 0; }
+  .slip .snip { font-size: 12px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #list .note-msg { font-size: 12px; opacity: .8; padding: 6px 4px; cursor: default; }
+  #list .empty-folder { font-family: var(--en); font-size: 11px; opacity: .7; padding: 2px 0 6px; cursor: default; }
+  .new-folder { display: inline-flex; align-items: center; gap: 8px; margin: 12px 2px 4px; cursor: pointer; opacity: .85;
+    font-family: var(--en); font-weight: 700; font-size: 12px; letter-spacing: .08em; }
+  .new-folder:hover { opacity: 1; }
+  /* 동그라미 안의 + (가는 선 두 개로 그려서 정가운데에) */
+  .plus { position: relative; width: 18px; height: 18px; border: 1.3px solid currentColor; border-radius: 50%; flex-shrink: 0; }
+  .plus::before, .plus::after { content: ''; position: absolute; left: 50%; top: 50%; background: currentColor; transform: translate(-50%, -50%); }
+  .plus::before { width: 8px; height: 1.3px; }
+  .plus::after { width: 1.3px; height: 8px; }
+  .folder-edit { margin: 10px 0; }
+  .folder-input { width: 100%; padding: 6px 9px; border: 1.5px solid var(--ink-btn); border-radius: 6px; outline: none;
+    background: var(--paper); color: var(--ink); font-family: var(--title); font-size: 13px; letter-spacing: var(--title-spacing); }
+  #list .drag-tip { font-size: 11px; opacity: .75; margin-top: 10px; cursor: default; line-height: 1.5; }
+
+  /* 동기화, 내보내기 */
+  .sync { margin-top: 14px; display: flex; align-items: center; gap: 8px; font-family: var(--en); font-size: 11px; color: var(--ink-soft);
+    padding: 8px 10px; border: 1px dashed var(--edge); border-radius: 6px; }
+  .sync .dot { width: 7px; height: 7px; border-radius: 50%; background: #B9B2A6; flex-shrink: 0; }
+  .sync.ok .dot { background: var(--ok); }
+  .sync.err .dot { background: var(--clay-text); }
+  .sync > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sync button, .sidebar-foot button, .sidebar-foot label { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .06em;
+    padding: 3px 9px; border: 1px solid var(--edge); border-radius: 5px; background: var(--paper); color: var(--ink); flex-shrink: 0; cursor: pointer; }
+  .sidebar-foot { display: flex; gap: 6px; margin-top: 8px; }
+  .sidebar-foot > * { flex: 1; text-align: center; padding: 5px 9px !important; }
 
   /* 끌어서 옮기기 */
-  /* 왼쪽 목록과 마인드맵 카드는 글자가 선택·드래그되지 않게 해요 (입력칸은 그대로 쓸 수 있어요) */
-  .sidebar, .mm-node { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-  .sidebar input { user-select: text; -webkit-user-select: text; }
-  .drag-ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 10px; border-radius: 8px;
-    background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,.2);
-    font-size: 13px; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drag-ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 10px; border-radius: 6px;
+    background: var(--paper); border: 1.5px solid var(--ink-btn); box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+    font-family: var(--title); font-size: 13px; letter-spacing: .05em; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.dragging, body.dragging * { cursor: grabbing !important; }
   .drag-src { opacity: .4; }
-  #list .folder-head.drop-target { background: var(--accent-soft); outline: 2px solid var(--accent); outline-offset: -2px; }
-  #list.drop-target { outline: 2px dashed var(--accent); outline-offset: -2px; border-radius: 8px; }
-  .mm-node.drop-child rect { stroke: var(--accent); stroke-width: 3; fill: var(--accent-soft); }
-  .drop-bar { position: fixed; z-index: 49; height: 4px; background: var(--accent); border-radius: 2px; pointer-events: none; }
+  .folder-head.drop-target { outline: 2px solid var(--ink-btn); outline-offset: 1px; }
+  #list.drop-target { outline: 2px dashed currentColor; outline-offset: -4px; border-radius: 6px; }
+  .mm-node.drop-child rect.box { stroke: var(--ink-btn); stroke-width: 2.5; }
+  .drop-bar { position: fixed; z-index: 49; height: 4px; background: var(--ink-btn); border-radius: 2px; pointer-events: none; }
 
-  main { overflow-y: auto; padding: 24px 32px; min-width: 0; }
-  .wrap { max-width: 760px; margin: 0 auto; }
-  #empty { text-align: center; margin-top: 20vh; color: var(--muted); }
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-  .toolbar .spacer { flex: 1; }
-  select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; background: var(--panel); }
-  .seg { display: inline-flex; }
-  .seg button { border-radius: 0; }
-  .seg button:first-child { border-radius: 8px 0 0 8px; }
-  .seg button:last-child { border-radius: 0 8px 8px 0; }
-  .seg button + button { border-left: none; }
-  .seg button.on { background: var(--accent-soft); color: var(--accent); }
-  #title { width: 100%; font-size: 26px; font-weight: 700; border: none; background: transparent;
-    padding: 6px 0; outline: none; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  /* ===== 오른쪽: 메모 카드 ===== */
+  main { overflow-y: auto; min-width: 0; padding: 22px 32px 40px; }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  .card-wrap { position: relative; padding-top: 34px; }
+  .card-tabs { position: absolute; top: 0; left: 0; right: 0; height: 36px; display: flex; gap: 6px; padding-left: 18px; }
+  .card-tabs .sp { flex: 1; }
+  .ctab { position: relative; top: 4px; height: 36px; padding: 0 20px; display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--edge); border-bottom: none; border-radius: 10px 10px 0 0;
+    background-color: var(--paper-2); background-image: var(--grain); color: var(--ink-soft);
+    font-family: var(--en); font-weight: 700; font-size: 13px; letter-spacing: .08em; }
+  .ctab .k { font-size: 11px; font-weight: 400; opacity: .6; letter-spacing: .02em; }
+  /* 고른 탭은 카드 윗줄에 딱 맞게 끝나서 아래로 삐져나오지 않아요 */
+  .ctab.on { top: 0; height: 35px; z-index: 2; background-color: var(--paper); color: var(--ink); }
+  .ctab.dark { background-color: var(--ink-btn); border-color: var(--ink-btn); color: var(--bg); }
+  .card { position: relative; z-index: 1; border: 1px solid var(--edge); border-radius: 4px 10px 10px 10px; box-shadow: var(--shadow);
+    background-color: var(--paper); background-image: var(--grain); padding: 30px 40px 26px; min-height: 420px; }
+  #empty { text-align: center; padding: 120px 20px; color: var(--ink-soft); font-family: var(--en); letter-spacing: .05em; }
+  .meta-top { display: flex; justify-content: space-between; gap: 10px; font-family: var(--en); font-size: 12px; color: var(--ink-soft); }
+  .meta-top #saveState { flex: 1; text-align: center; opacity: .8; }
+  #title { display: block; width: 100%; border: none; outline: none; background: transparent; padding: 0; margin: 18px 0 10px;
+    font-family: var(--title); font-weight: 700; font-size: 30px; letter-spacing: var(--title-spacing); color: var(--ink); }
+  #title::placeholder { color: var(--ink-soft); opacity: .5; font-weight: 400; }
+  .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-family: var(--en); font-weight: 700; font-size: 11px;
+    letter-spacing: .08em; color: var(--ink-soft); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; line-height: 1; position: relative; }
+  .pill select, .pill input { appearance: none; -webkit-appearance: none; border: none; outline: none; background: transparent; cursor: pointer; }
+  .type-pill { padding: 0; }
+  .type-pill select { padding: 5px 12px; border-radius: 999px; font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; }
+  /* 종류 알약 색 (위의 "투명 배경" 규칙보다 우선하도록 한 단계 더 자세히) */
+  .type-pill select.t-fleeting { background-color: var(--fleeting); color: var(--fleeting-ink); }
+  .type-pill select.t-literature { background-color: var(--literature); color: var(--literature-ink); }
+  .type-pill select.t-index { background-color: var(--index); color: var(--index-ink); }
+  .type-pill select.t-permanent { background-color: var(--permanent); color: var(--permanent-ink); }
+  .type-pill select option { background: var(--paper); color: var(--ink); }
+  .folder-pill { padding: 0 4px 0 10px; border: 1px solid var(--edge); }
+  .folder-pill .sw { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .folder-pill select, .folder-pill input { padding: 5px 8px 5px 0; font-family: var(--title); font-weight: 400; font-size: 12px;
+    letter-spacing: var(--title-spacing); color: var(--ink); }
+  .folder-pill select.none { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); }
+  .folder-pill input { width: 140px; cursor: text; }
+  .double { border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); height: 4px; margin: 18px 0 8px; }
 
   .editor-area { position: relative; }
-  #content { width: 100%; min-height: 320px; resize: vertical; padding: 14px; line-height: 24px;
-    font-size: 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); outline: none; }
-  #content:focus { border-color: var(--accent); }
-  .hint { margin: 6px 2px 0; }
-  .preview { min-height: 120px; line-height: 1.7; font-size: 16px; }
-  .preview h2, .preview h3, .preview h4 { margin: 18px 0 8px; }
-  .preview p { margin: 0 0 10px; }
-  .preview code { background: var(--hover); padding: 1px 5px; border-radius: 4px; }
-  .wl { color: var(--accent); text-decoration: none; background: var(--accent-soft);
-    padding: 0 4px; border-radius: 4px; }
-  .wl.missing { color: var(--missing); background: transparent; border-bottom: 1px dashed var(--missing); border-radius: 0; }
+  #content { display: block; width: 100%; min-height: 300px; resize: vertical; border: none; outline: none; background: transparent; padding: 0;
+    font-size: 15.5px; line-height: 32px; color: var(--ink); }
+  #content::placeholder { color: var(--ink-soft); opacity: .6; }
+  .preview { min-height: 300px; font-size: 15.5px; line-height: 32px; }
+  .preview p { margin: 0 0 16px; }
+  .preview h2, .preview h3, .preview h4 { font-family: var(--title); letter-spacing: .06em; margin: 22px 0 8px; line-height: 1.4; }
+  .preview ul { margin: 0 0 16px; padding-left: 22px; }
+  .preview code { background: var(--paper-2); padding: 1px 5px; border-radius: 4px; }
+  .preview .empty-note { color: var(--ink-soft); }
+  .wl { color: inherit; text-decoration: underline; text-decoration-color: var(--clay-text); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+  .wl.missing { text-decoration-style: dashed; color: var(--clay-text); }
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px;
+    font-family: var(--en); font-size: 11px; color: var(--ink-soft); letter-spacing: .04em; }
+  .foot .sp { flex: 1; }
+  /* Delete: 글자 위의 빈칸을 잘라 내서 위아래 여백을 똑같이 */
+  .btn-del { font-family: var(--en); font-weight: 700; letter-spacing: .08em; font-size: 12px; line-height: 1; background: transparent;
+    border: 1px solid var(--edge); border-radius: 6px; padding: 7px calc(12px - .08em) 7px 12px; color: var(--clay-text);
+    text-box: trim-both cap alphabetic; flex-shrink: 0; }
+  .btn-del.armed { background: var(--clay-text); border-color: var(--clay-text); color: #fff; }
 
-  /* [[ 자동완성 목록 */
-  .ac { position: absolute; z-index: 10; list-style: none; margin: 0; padding: 4px; width: 260px;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,.15); }
-  .ac li { padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  .ac li.sel { background: var(--accent-soft); }
+  /* [[ 자동완성 */
+  .ac { position: absolute; z-index: 10; list-style: none; margin: 0; padding: 4px; width: 280px;
+    background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, .14); }
+  .ac li { display: flex; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 4px; cursor: pointer;
+    font-family: var(--title); font-size: 13.5px; letter-spacing: .06em; }
+  .ac li .ac-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac li .ac-type { font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: .06em; color: var(--ink-soft); }
+  .ac li.sel { background: var(--paper-2); }
 
-  .backlinks { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); }
-  .backlinks h3 { font-size: 15px; margin: 0 0 10px; }
-  #backlinks { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-  #backlinks li { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
-    background: var(--panel); cursor: pointer; }
-  #backlinks li:hover { border-color: var(--accent); }
-  #backlinks .ctx { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  /* 백링크: 작은 색인 카드 */
+  .section-h { font-family: var(--en); font-weight: 700; font-size: 12px; letter-spacing: .1em; color: var(--ink-soft);
+    margin: 34px 4px 12px; display: flex; align-items: center; gap: 12px; }
+  .section-h::after { content: ''; flex: 1; border-top: 1px solid var(--edge); }
+  .backlinks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .bcard { padding: 12px 14px; border-radius: 3px; box-shadow: var(--shadow); border-top: 4px solid var(--k);
+    background-color: var(--paper); background-image: var(--grain); cursor: pointer; }
+  .bcard:hover { box-shadow: 0 1px 1px rgba(60, 45, 25, .1), 0 6px 14px rgba(60, 45, 25, .12); }
+  .bcard .bt { font-family: var(--title); font-weight: 700; font-size: 14px; letter-spacing: var(--title-spacing); }
+  .bcard .bs { font-size: 12px; color: var(--ink-soft); margin-top: 4px; line-height: 1.5; }
+  .bempty { font-size: 13px; color: var(--ink-soft); grid-column: 1 / -1; }
+
   /* 마인드맵 */
-  .map { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px; }
-  .map-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .map-bar button { padding: 3px 10px; font-size: 13px; border-radius: 999px; }
-  .map-bar button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-  .map-bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
-  .map-bar kbd { font: 11px/1 inherit; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; margin-left: 4px; color: var(--muted); }
-  #mapCanvas { position: relative; overflow: auto; max-height: 70vh; outline: none; border-radius: 8px; }
-  #mapCanvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+  .map-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px;
+    font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .06em; color: var(--ink-soft); }
+  .map-bar button { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .06em; padding: 4px 10px;
+    border: 1px solid var(--edge); border-radius: 999px; background: var(--paper); color: var(--ink); }
+  .map-bar button.on { background: var(--ink-btn); border-color: var(--ink-btn); color: var(--bg); }
+  .map-bar .sep { width: 1px; height: 18px; background: var(--edge); margin: 0 4px; }
+  .map-bar kbd { font: 400 10px var(--en); padding: 1px 4px; border: 1px solid var(--edge); border-radius: 3px; margin-left: 5px; color: var(--ink-soft); }
+  #mapCanvas { position: relative; overflow: auto; max-height: 70vh; outline: none; border-radius: 6px; }
   #mapCanvas svg { display: block; }
-  .map-help { margin: 8px 2px 0; }
-  .mm-edge { stroke: var(--muted); stroke-width: 1.5; fill: none; opacity: .55; }
-  .mm-node { cursor: pointer; }
-  .mm-node rect { fill: var(--panel); stroke-width: 1.5; }
-  .mm-node:hover rect { fill: var(--hover); }
-  .mm-node text { fill: var(--text); font-size: 13px; dominant-baseline: central; pointer-events: none; }
-  .mm-node.root rect { fill: var(--accent); stroke: var(--accent); }
-  .mm-node.root text { fill: var(--bg); font-size: 15px; font-weight: 700; }
-  .mm-node.l1 rect { fill: var(--accent-soft); }
-  .mm-node.sel rect { stroke: var(--accent); stroke-width: 3; }
-  .mm-node.root.sel rect { stroke: var(--text); }
-  .mm-node.missing rect { stroke: var(--missing); stroke-dasharray: 5 4; fill: var(--panel); }
-  .mm-node.missing text { fill: var(--missing); }
-  .mm-node.pending rect { stroke: var(--accent); stroke-dasharray: 5 4; }
-  .mm-input { position: absolute; box-sizing: border-box; padding: 0 10px; font-size: 13px;
-    border: 2px solid var(--accent); border-radius: 6px; background: var(--panel); outline: none; }
-  .t-fleeting { stroke: #d9a514; } .t-literature { stroke: #2e9e5b; }
-  .t-permanent { stroke: var(--accent); } .t-index { stroke: #9157d6; }
-  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 8px;
-    font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .map-help { margin: 10px 2px 0; font-size: 12px; color: var(--ink-soft); line-height: 1.7; }
+  .mm-edge { stroke: var(--ink); stroke-opacity: .45; stroke-width: 1.2; fill: none; }
+  .mm-node { cursor: pointer; filter: drop-shadow(0 2px 2.5px rgba(60, 45, 25, .18)); }
+  .mm-node rect.box { fill: var(--paper); stroke: none; }
+  .mm-node:hover rect.box { stroke: var(--edge); stroke-width: 1; }
+  .mm-node text { fill: var(--ink); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em;
+    dominant-baseline: central; pointer-events: none; }
+  .mm-node.root text { font-size: 15px; }
+  .mm-node.sel rect.box { stroke: var(--ink-btn); stroke-width: 2; }
+  .mm-node.missing rect.box { stroke: var(--clay-text); stroke-dasharray: 4 3; stroke-width: 1.2; }
+  .mm-node.missing text { fill: var(--clay-text); }
+  .mm-node.pending rect.box { stroke: var(--ink-btn); stroke-dasharray: 5 4; }
+  .mm-input { position: absolute; box-sizing: border-box; padding: 0 10px; border: 1.5px solid var(--ink-btn); border-radius: 4px; outline: none;
+    background: var(--paper); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em; }
+  .mm-lonely { fill: var(--ink-soft); font-family: var(--en); font-size: 12px; }
+
+  /* 알림 */
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 60; max-width: calc(100vw - 32px);
+    background: var(--ink-btn); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 13.5px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; }
   #toast.show { opacity: 1; pointer-events: auto; }
-  #toast button { margin-left: 10px; padding: 2px 10px; background: transparent; color: inherit;
-    border-color: currentColor; font-weight: 600; }
-  .mobile-only { display: none; }
+  #toast button { margin-left: 10px; padding: 2px 10px; background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 5px;
+    font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .06em; }
 
   /* ===== 핸드폰처럼 좁은 화면 ===== */
   @media (max-width: 760px) {
     .app { grid-template-columns: minmax(0, 1fr); }
-    main { display: none; padding: 16px; }
+    .sidebar { padding: 16px; }
+    main { display: none; padding: 14px 12px 30px; }
     .app.show-main .sidebar { display: none; }
     .app.show-main main { display: block; }
-    .mobile-only { display: inline-block; }
+    .mobile-only { display: inline-flex !important; }
+    .card { padding: 22px 18px 20px; }
+    .card-tabs { padding-left: 8px; gap: 4px; }
+    .ctab { padding: 0 10px; font-size: 12px; white-space: nowrap; }
+    #newBtn { display: none; }   /* 핸드폰에서는 목록 화면 위쪽의 New note 버튼을 써요 */
+    .ctab .k { display: none; }
+    #title { font-size: 24px; }
   }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <aside class="sidebar">
-    <div class="brand">🗂️ Zettelkasten</div>
-    <button id="newBtn" class="primary">+ 새 메모</button>
-    <input id="search" type="search" placeholder="🔍 제목이나 내용으로 검색">
-    <div class="filters" id="filters"></div>
-    <label class="sort-row muted">정렬
-      <select id="sortSel">
-        <option value="updated">✏️ 최근 고친 순</option>
-        <option value="created">🆕 최근 만든 순</option>
-        <option value="oldest">📅 오래된 순 (만든 날)</option>
-        <option value="title">🔤 제목 가나다순</option>
-        <option value="links">🔗 연결 많은 순</option>
-        <option value="lonely">🏝️ 외톨이 먼저 (연결 적은 순)</option>
-      </select>
-    </label>
-    <ul id="list"></ul>
-    <div class="sync" id="syncBox"><span id="syncText">☁️ 확인 중…</span><button id="syncBtn" hidden></button></div>
+    <div class="brand-row">
+      <div class="brand">Zettelkasten</div>
+      <button id="newBtnSide" class="side-new mobile-only">New note</button>
+    </div>
+    <input id="search" class="search" type="search" placeholder="Search titles and notes" autocomplete="off">
+    <div class="stack">
+      <div id="sheets"></div>
+      <div class="sheet big" id="bigSheet">
+        <div class="tab" id="bigTab"></div>
+        <label class="sort"><span>Sort</span>
+          <select id="sortSel">
+            <option value="updated">Recently edited</option>
+            <option value="created">Recently created</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">Title A–Z</option>
+            <option value="links">Most linked</option>
+            <option value="lonely">Unlinked first</option>
+          </select>
+        </label>
+        <ul id="list"></ul>
+      </div>
+    </div>
+    <div class="sync" id="syncBox"><i class="dot"></i><span id="syncText">Checking…</span><button id="syncBtn" hidden></button></div>
     <div class="sidebar-foot">
-      <button id="exportBtn" title="메모 전체를 파일로 저장해요">⬇️ 내보내기</button>
-      <label class="btn" title="저장해 둔 파일에서 메모를 불러와요">⬆️ 가져오기<input type="file" id="importInput" accept=".json,application/json" hidden></label>
+      <button id="exportBtn" title="메모 전체를 파일로 저장해요">Export</button>
+      <label title="저장해 둔 파일에서 메모를 불러와요">Import<input type="file" id="importInput" accept=".json,application/json" hidden></label>
     </div>
   </aside>
 
   <main>
     <div class="wrap">
-      <div id="empty">
-        <p style="font-size:40px;margin:0">🗂️</p>
-        <p>왼쪽에서 메모를 고르거나 <b>+ 새 메모</b>를 눌러 보세요.</p>
-      </div>
-      <div id="editor" hidden>
-        <div class="toolbar">
-          <button id="backBtn" class="mobile-only">← 목록</button>
-          <select id="typeSel" title="메모 종류"></select>
-          <select id="folderSel" title="폴더"></select>
-          <input id="folderNew" class="folder-input" placeholder="새 폴더 이름" autocomplete="off" hidden>
-          <div class="seg">
-            <button id="editTab">✏️ 쓰기</button><button id="viewTab">👀 보기</button><button id="mapTab">🗺️ 마인드맵</button>
-          </div>
-          <span class="spacer"></span>
-          <span id="saveState" class="muted"></span>
-          <button id="deleteBtn" class="danger">삭제</button>
+      <div class="card-wrap">
+        <div class="card-tabs">
+          <button id="backBtn" class="ctab mobile-only">Back</button>
+          <span id="modeTabs" style="display:contents">
+            <button class="ctab" id="editTab"><span class="k">01</span>Write</button>
+            <button class="ctab" id="viewTab"><span class="k">02</span>Read</button>
+            <button class="ctab" id="mapTab"><span class="k">03</span>Mind map</button>
+          </span>
+          <span class="sp"></span>
+          <button class="ctab dark" id="newBtn">New note</button>
         </div>
-        <input id="title" placeholder="제목: 생각 하나를 한 문장으로" autocomplete="off">
-        <div class="editor-area">
-          <textarea id="content" placeholder="여기에 생각을 적어 보세요.&#10;다른 메모와 연결하려면 [[ 를 입력하세요."></textarea>
-          <ul id="ac" class="ac" hidden></ul>
-          <p id="hint" class="muted hint">💡 <b>[[</b> 를 치면 다른 메모 이름이 나와요. <b>**굵게**</b>, <b># 제목</b>, <b>- 목록</b>도 쓸 수 있어요.</p>
-          <div id="preview" class="preview" hidden></div>
-          <div id="map" class="map" hidden>
-            <div class="map-bar">
-              <span class="muted">펼칠 단계</span>
-              <button data-depth="1">1</button><button data-depth="2">2</button><button data-depth="3">3</button><button data-depth="4">4</button>
-              <span class="sep"></span>
-              <button data-act="child">➕ 하위 메모<kbd>Tab</kbd></button>
-              <button data-act="sibling">➕ 같은 단계<kbd>Enter</kbd></button>
-              <button data-act="rename">✏️ 이름<kbd>F2</kbd></button>
-              <button data-act="center">🎯 맨 앞으로</button>
-              <button data-act="open">📄 내용 보기</button>
-              <button data-act="help" id="mapHelpBtn" title="마인드맵 사용법 보기/숨기기">❓ 사용법</button>
+        <article class="card">
+          <div id="empty">Pick a note on the left, or start a New note.</div>
+          <div id="editor" hidden>
+            <div class="meta-top"><span id="noteNo"></span><span id="saveState"></span><span id="noteEdited"></span></div>
+            <input id="title" placeholder="Title — one idea in one sentence" autocomplete="off">
+            <div class="crumbs">
+              <span class="pill type-pill"><select id="typeSel" title="메모 종류"></select></span>
+              <span class="pill folder-pill"><i class="sw" id="folderSw"></i><select id="folderSel" title="폴더"></select><input id="folderNew" placeholder="New folder name" autocomplete="off" hidden></span>
+              <span id="linkCount"></span>
             </div>
-            <div id="mapCanvas" tabindex="0"></div>
-            <p class="muted map-help" id="mapHelp" hidden>클릭: 고르기 · 더블클릭: 그 메모 쓰기 화면으로 · 방향키: 옮겨 다니기 · 새 이름을 적다가 Tab을 누르면 바로 그 아래 메모를 또 만들어요<br>
-              🖐 카드를 끌어다 다른 카드에 놓기: <b>가운데</b> → 하위로 · <b>위/아래 끝</b> → 같은 단계로 · <b>Ctrl</b> 누른 채 → 예전 연결은 두고 연결만 추가 (핸드폰은 꾹 누른 뒤 끌기)</p>
+            <div class="double"></div>
+            <div class="editor-area">
+              <textarea id="content" placeholder="Write your thought here. Type [[ to link another note."></textarea>
+              <ul id="ac" class="ac" hidden></ul>
+              <div id="preview" class="preview" hidden></div>
+              <div id="map" hidden>
+                <div class="map-bar">
+                  <span>Depth</span>
+                  <button data-depth="1">1</button><button data-depth="2">2</button><button data-depth="3">3</button><button data-depth="4">4</button>
+                  <span class="sep"></span>
+                  <button data-act="child">+ Child<kbd>Tab</kbd></button>
+                  <button data-act="sibling">+ Sibling<kbd>Enter</kbd></button>
+                  <button data-act="rename">Rename<kbd>F2</kbd></button>
+                  <button data-act="center">Focus</button>
+                  <button data-act="open">Open</button>
+                  <button data-act="help" id="mapHelpBtn" title="마인드맵 사용법 보기/숨기기">Help</button>
+                </div>
+                <div id="mapCanvas" tabindex="0"></div>
+                <p class="map-help" id="mapHelp" hidden>클릭: 고르기 · 더블클릭: 그 메모 쓰기 화면으로 · 방향키: 옮겨 다니기 · 새 이름을 적다가 Tab을 누르면 바로 그 아래 메모를 또 만들어요<br>
+                  카드를 끌어다 다른 카드에 놓기: <b>가운데</b> → 하위로 · <b>위/아래 끝</b> → 같은 단계로 · <b>Ctrl</b> 누른 채 → 예전 연결은 두고 연결만 추가 (핸드폰은 꾹 누른 뒤 끌기)</p>
+              </div>
+            </div>
+            <div class="foot"><span id="hint">Type [[ to link another note · **bold** · # heading · - list</span><span class="sp"></span><button id="deleteBtn" class="btn-del">Delete</button></div>
           </div>
-        </div>
-        <p id="noteMeta" class="muted"></p>
-        <section class="backlinks">
-          <h3>🔙 이 메모를 가리키는 메모들</h3>
-          <ul id="backlinks"></ul>
-        </section>
+        </article>
+      </div>
+      <div id="backSection" hidden>
+        <div class="section-h">Backlinks</div>
+        <ul id="backlinks" class="backlinks"></ul>
       </div>
     </div>
   </main>
@@ -272,12 +420,19 @@
 //  1. 기본 설정
 // =====================================================
 const STORAGE_KEY = 'memo-box-notes-v1';   // 브라우저 창고에 붙이는 이름표
+// 메모 종류 (안쪽 이름은 그대로 두고, 화면에 보이는 이름만 영어로)
 const TYPES = {
-  fleeting:   { label: '임시', icon: '💭' },
-  literature: { label: '문헌', icon: '📚' },
-  permanent:  { label: '보관', icon: '💎' },
-  index:      { label: '목차', icon: '🧭' },
+  fleeting:   { label: 'Fleeting',  tab: 'FLEETING' },
+  literature: { label: 'Reference', tab: 'REFERENCE' },
+  index:      { label: 'Index',     tab: 'INDEX' },
+  permanent:  { label: 'Permanent', tab: 'PERMANENT' },
 };
+// 왼쪽 위 겹친 종이 순서와 탭 위치
+const SHEETS = ['all', 'fleeting', 'literature', 'index', 'permanent'];
+const SHEET_TAB = { all: 'ALL', ...Object.fromEntries(Object.entries(TYPES).map(([k, v]) => [k, v.tab])) };
+const TAB_X = [24, 110, 40, 150, 70];
+// 폴더 색 열한 가지 (새 폴더는 이 순서대로, 옆 폴더가 안 쓴 색을 먼저 골라요)
+const COLORS = ['sage', 'blue', 'ochre', 'mauve', 'clay', 'slate', 'olive', 'rose', 'lavender', 'moss', 'sand'];
 const LINK_RE = /\[\[([^\[\]\n]+?)\]\]/g;    // [[메모 제목]] 을 찾는 규칙
 
 const FOLDER_KEY = 'memo-box-folders-v1';
@@ -289,6 +444,7 @@ let folders = loadFolders();   // 폴더: { id, type, name, created, updated } �
 let collapsed = loadCollapsed();
 let folderEdit = null;         // 폴더 이름을 적는 중이면 { kind: 'new', type } 또는 { kind: 'rename', id }
 let folderArm = null;          // "지울까요?" 확인 중인 폴더 번호
+let folderPalette = null;      // 색 고르기를 펼쳐 둔 폴더 번호
 let currentId = null;
 let filter = 'all';
 let mode = 'edit';
@@ -316,7 +472,7 @@ function saveCollapsed() {
 
 let saveTimer = null;
 function saveSoon() {
-  $('saveState').textContent = '저장 중…';
+  $('saveState').textContent = 'Saving…';
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, 400);
 }
@@ -325,9 +481,9 @@ function saveNow() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
     localStorage.setItem(FOLDER_KEY, JSON.stringify(folders));
-    $('saveState').textContent = '저장됨 ✓';
+    $('saveState').textContent = 'Saved';
   } catch (e) {
-    $('saveState').textContent = '⚠️ 저장 실패 — 내보내기로 백업하세요';
+    $('saveState').textContent = 'Save failed — please Export a backup';
   }
   pushChanges();   // 로그인해 있으면 바뀐 메모를 인터넷 창고에도 올려요
 }
@@ -341,7 +497,7 @@ function sampleNotes() {
       content: '# Zettelkasten에 오신 걸 환영해요!\n\n' +
         '- 메모 하나에는 **생각 하나만** 적어요.\n' +
         '- 다른 메모와 연결하려면 [[ 를 치고 제목을 골라요.\n' +
-        '- 메모 아래쪽 🔙 칸에서 **이 메모를 가리키는 메모들**을 볼 수 있어요.\n' +
+        '- 메모 아래쪽 Backlinks 칸에서 **이 메모를 가리키는 메모들**을 볼 수 있어요.\n' +
         '- 빨간 점선 링크는 아직 없는 메모예요. 누르면 새로 만들어져요: [[아직 없는 메모]]\n\n' +
         '## 예시 메모 둘러보기\n- [[광합성]]\n- [[식물도 잠을 잘까?]]',
       created: now - 4000, updated: now - 4000 },
@@ -424,9 +580,22 @@ function folderTree(type, parentId = '', depth = 0) {
 const folderNameTaken = (type, name, exceptId, parentId = '') =>
   childFoldersOf(type, parentId).some(f => f.id !== exceptId && f.name.trim().toLowerCase() === name.trim().toLowerCase());
 
+// 폴더 색: 정해 둔 색이 있으면 그 색, 없으면(예전에 만든 폴더) 번호로 늘 같은 색을 골라요
+function colorOf(f) {
+  if (COLORS.includes(f.color)) return f.color;
+  let h = 0;
+  for (const ch of f.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return COLORS[h % COLORS.length];
+}
+// 새 폴더 색: 같은 자리의 폴더들이 가장 적게 쓴 색 (같으면 COLORS 순서대로)
+function pickColor(type, parent) {
+  const used = childFoldersOf(type, parent).map(colorOf);
+  return COLORS.reduce((best, c) => used.filter(x => x === c).length < used.filter(x => x === best).length ? c : best, COLORS[0]);
+}
+
 function createFolder(name, type, parent = '') {
   const folder = { id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type, name, parent,
-    created: Date.now(), updated: Date.now() };
+    color: pickColor(type, parent), created: Date.now(), updated: Date.now() };
   folders.push(folder);
   saveNow();
   return folder;
@@ -435,15 +604,24 @@ function createFolder(name, type, parent = '') {
 // =====================================================
 //  4. 왼쪽 목록 그리기
 // =====================================================
-function renderFilters() {
+// 겹쳐진 종이 탭: 고른 종류는 맨 아래 큰 종이가 되고, 나머지는 위에 차례로 겹쳐요
+function renderSheets() {
   const count = t => t === 'all' ? notes.length : notes.filter(n => n.type === t).length;
-  const items = [['all', '전체'], ...Object.entries(TYPES).map(([k, v]) => [k, `${v.icon} ${v.label}`])];
-  $('filters').innerHTML = items.map(([k, label]) =>
-    `<button data-type="${k}" class="${filter === k ? 'active' : ''}">${label} ${count(k)}</button>`).join('');
+  const others = SHEETS.filter(t => t !== filter);
+  $('sheets').innerHTML = others.map((t, i) =>
+    `<div class="sheet t-${t}" data-type="${t}"><div class="tab" style="left:${TAB_X[i]}px">${SHEET_TAB[t]} <span class="n">${count(t)}</span></div></div>`).join('');
+  $('bigSheet').className = `sheet big t-${filter}`;
+  $('bigTab').style.left = TAB_X[4] + 'px';
+  $('bigTab').innerHTML = `${SHEET_TAB[filter]} <span class="n">${count(filter)}</span>`;
+  // 탭이 종이 오른쪽 밖으로 나가면 안쪽으로 당겨요 (어깨 곡선 20px까지 생각해서)
+  for (const tab of document.querySelectorAll('.stack .tab')) {
+    const max = tab.parentElement.clientWidth - tab.offsetWidth - 22;
+    if (max > 0 && tab.offsetLeft > max) tab.style.left = max + 'px';
+  }
 }
 
 // 목록의 메모 한 줄. 폴더별로 묶지 않을 때(전체·검색)는 미리보기 앞에 폴더 이름을 붙여요
-const indent = depth => `style="padding-left:${8 + depth * 16}px"`;   // 폴더 층마다 조금씩 들여 써요
+const indent = depth => `style="margin-left:${depth * 18}px"`;   // 폴더 층마다 조금씩 들여 써요
 
 // ----- 정렬 -----
 const SORT_KEY = 'memo-box-sort-v1';   // 고른 정렬은 기기마다 기억해요
@@ -484,7 +662,7 @@ function shortDate(t) {
   return d.getFullYear() === now.getFullYear() ? `${d.getMonth() + 1}.${d.getDate()}` : `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 function noteMeta(n) {
-  if (counts) return `🔗 ${counts.get(n.id) ?? 0}`;
+  if (counts) return `${counts.get(n.id) ?? 0} ↔`;
   if (sortMode === 'created' || sortMode === 'oldest') return shortDate(n.created);
   if (sortMode === 'updated') return shortDate(n.updated);
   return '';
@@ -497,23 +675,26 @@ function noteItem(n, q, inFolder, depth = 1) {
     if (i >= 0) snippet = '…' + n.content.slice(Math.max(0, i - 15), i + 40).replace(/\n/g, ' ');
   }
   const f = folderOf(n);
-  if (f && !inFolder) snippet = `📁 ${folderPath(f)} · ${snippet}`;
-  return `<li data-id="${n.id}" ${inFolder && f ? `data-folder="${f.id}" ${indent(depth + 0.6)}` : ''} class="${n.id === currentId ? 'active' : ''}${inFolder ? ' in-folder' : ''}">
-    <div class="t"><span class="tt">${TYPES[n.type].icon} ${esc(n.title) || '<span class="muted">(제목 없음)</span>'}</span><span class="meta">${noteMeta(n)}</span></div>
-    <div class="s">${esc(snippet)}</div></li>`;
+  if (f && !inFolder) snippet = `${folderPath(f)} · ${snippet}`;
+  // 왼쪽 가는 색 띠: 폴더 안이면 폴더 색, 전체·검색 목록이면 메모 종류 색
+  const strip = f ? `var(--f-${colorOf(f)})` : (filter === 'all' || q) ? `var(--${n.type})` : 'transparent';
+  return `<li data-id="${n.id}" ${inFolder && f ? `data-folder="${f.id}"` : ''} class="slip${n.id === currentId ? ' active' : ''}"
+    style="--k:${strip};${inFolder ? `margin-left:${(depth + 1) * 18}px` : ''}">
+    <div class="row"><span class="title">${esc(n.title) || '<span class="untitled">(Untitled)</span>'}</span><span class="meta">${noteMeta(n)}</span></div>
+    <div class="snip">${esc(snippet)}</div></li>`;
 }
 
 let renderingList = false;   // 목록을 다시 그리는 중에는 입력칸이 사라져도 "다 적었다"로 보지 않아요
 function renderList() {
-  renderFilters();
+  renderSheets();
   const q = $('search').value.trim().toLowerCase();
   const shown = sortNotes(notes
     .filter(n => filter === 'all' || n.type === filter)
     .filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)));
 
   let html;
-  if (filter !== 'all' && !q) html = folderTreeHtml(shown);   // 종류를 고르면 폴더별로 묶어서 보여 줘요
-  else if (!shown.length) html = `<li class="muted" style="cursor:default">${q ? '찾는 메모가 없어요' : '메모가 없어요'}</li>`;
+  if (filter !== 'all' && !q) html = folderTreeHtml(shown, q);   // 종류를 고르면 폴더별로 묶어서 보여 줘요
+  else if (!shown.length) html = `<li class="note-msg">${q ? 'No matching notes' : 'No notes yet'}</li>`;
   else html = shown.map(n => noteItem(n, q, false)).join('');
 
   renderingList = true;
@@ -535,23 +716,28 @@ function renderList() {
 
 function folderTreeHtml(shown) {
   const inputRow = depth => `<li class="folder-edit" ${indent(depth)}><input id="folderInput" class="folder-input"
-    placeholder="폴더 이름 적고 Enter" value="${esc(folderEdit?.value || '')}" autocomplete="off"></li>`;
+    placeholder="Folder name, then Enter" value="${esc(folderEdit?.value || '')}" autocomplete="off"></li>`;
   // 폴더 안(아래층 폴더 포함)에 있는 메모 수
   const countIn = id => shown.filter(n => { const f = folderOf(n); return f && isFolderInside(f.id, id); }).length;
   let html = '';
   (function walk(parentId, depth) {
     for (const f of childFoldersOf(filter, parentId)) {
-      const open = !collapsed.has(f.id), arming = folderArm === f.id;
+      const open = !collapsed.has(f.id), arming = folderArm === f.id, color = colorOf(f);
       if (folderEdit?.kind === 'rename' && folderEdit.id === f.id) html += inputRow(depth);
-      else html += `<li class="folder-head${arming ? ' arming' : ''}" data-folder="${f.id}" ${indent(depth)}>
-        <span class="arrow">${open ? '▾' : '▸'}</span>
-        <span class="fname">📁 ${esc(f.name)}</span><span class="count">${countIn(f.id)}</span>
+      else html += `<li class="folder-head c-${color}${arming ? ' arming' : ''}" data-folder="${f.id}" ${indent(depth)}>
+        <span class="arrow">${open ? '▼' : '▶'}</span>
+        <span class="fname">${esc(f.name)}</span>
         <span class="f-actions">
-          <button data-fact="add" title="이 폴더에 새 메모">＋</button>
-          <button data-fact="subfolder" title="이 폴더 안에 폴더 만들기">📁＋</button>
-          <button data-fact="rename" title="폴더 이름 바꾸기">✏️</button>
-          <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (안에 있던 것은 한 층 위로 꺼내요)">${arming ? '지울까요?' : '🗑'}</button>
-        </span></li>`;
+          <button data-fact="add" title="이 폴더에 새 메모">+ NOTE</button>
+          <button data-fact="subfolder" title="이 폴더 안에 폴더 만들기">+ SUB</button>
+          <button data-fact="rename" title="폴더 이름 바꾸기">EDIT</button>
+          <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (안에 있던 것은 한 층 위로 꺼내요)">${arming ? 'SURE?' : 'DEL'}</button>
+        </span>
+        <span class="count">${countIn(f.id)}</span>
+        <button class="swatch" data-fact="color" title="폴더 색 바꾸기"></button></li>`;
+      // 색 고르기: 폴더 바로 아래에 열한 가지 색
+      if (folderPalette === f.id) html += `<li class="palette" ${indent(depth)}><span>Color</span>${COLORS.map(c =>
+        `<button class="c-${c}${c === color ? ' on' : ''}" data-pick="${c}" data-folder="${f.id}" title="${c}"></button>`).join('')}</li>`;
       if (!open) continue;
       const making = folderEdit?.kind === 'new' && folderEdit.parent === f.id;
       if (making) html += inputRow(depth + 1);
@@ -559,13 +745,13 @@ function folderTreeHtml(shown) {
       const inside = shown.filter(n => folderOf(n)?.id === f.id);
       html += inside.map(n => noteItem(n, '', true, depth)).join('');
       if (!inside.length && !making && !childFoldersOf(filter, f.id).length) {
-        html += `<li class="in-folder empty-folder muted" data-folder="${f.id}" ${indent(depth + 1.6)}>비어 있어요</li>`;
+        html += `<li class="empty-folder" data-folder="${f.id}" style="margin-left:${(depth + 1) * 18}px">Empty</li>`;
       }
     }
   })('', 0);
   html += shown.filter(n => !folderOf(n)).map(n => noteItem(n, '', false)).join('');   // 폴더에 안 넣은 메모
-  html += folderEdit?.kind === 'new' && !folderEdit.parent ? inputRow(0) : '<li class="new-folder">＋ 새 폴더</li>';
-  if (foldersOf(filter).length) html += '<li class="drag-tip muted">💡 메모나 폴더를 끌어서 다른 폴더에 넣거나, 빈 곳에 놓아 맨 위로 꺼낼 수 있어요</li>';
+  html += folderEdit?.kind === 'new' && !folderEdit.parent ? inputRow(0) : '<li class="new-folder"><span class="plus"></span>New folder</li>';
+  if (foldersOf(filter).length) html += '<li class="drag-tip">메모나 폴더를 끌어서 다른 폴더에 넣거나, 빈 곳에 놓아 맨 위로 꺼낼 수 있어요</li>';
   return html;
 }
 
@@ -593,7 +779,10 @@ let folderArmTimer = null;
 function folderAction(act, id) {
   const f = getFolder(id);
   if (!f) return;
-  if (act === 'add') {
+  if (act === 'color') {   // 색 고르기 열기/닫기
+    folderPalette = folderPalette === id ? null : id;
+    renderList();
+  } else if (act === 'add') {
     collapsed.delete(id);
     saveCollapsed();
     const note = createNote('', f.type, f.id);
@@ -639,15 +828,33 @@ function folderAction(act, id) {
   }
 }
 
-// 메모 화면 위쪽의 폴더 고르기 상자
+// 폴더 색 바꾸기
+function setFolderColor(id, color) {
+  const f = getFolder(id);
+  if (!f || !COLORS.includes(color)) return;
+  f.color = color;
+  f.updated = Date.now();
+  folderPalette = null;
+  saveNow();
+  renderList();
+  if (currentId) renderFolderSel();
+}
+
+// 메모 카드의 분류 표시: 종류(색 알약)와 폴더(색 네모 + 이름)
 function renderFolderSel() {
   const note = getNote(currentId);
   if (!note) return;
-  $('folderSel').innerHTML = '<option value="">📄 폴더 없음</option>' +
+  $('typeSel').value = note.type;
+  $('typeSel').className = `t-${note.type}`;
+  $('folderSel').innerHTML = '<option value="">No folder</option>' +
     folderTree(note.type).map(({ f, depth }) =>   // 안쪽 폴더는 들여 써서 보여 줘요
-      `<option value="${f.id}">${'   '.repeat(depth)}📁 ${esc(f.name)}</option>`).join('') +
-    '<option value="__new">＋ 새 폴더 만들기…</option>';
-  $('folderSel').value = folderOf(note)?.id || '';
+      `<option value="${f.id}">${'   '.repeat(depth)}${esc(f.name)}</option>`).join('') +
+    '<option value="__new">+ New folder…</option>';
+  const f = folderOf(note);
+  $('folderSel').value = f?.id || '';
+  $('folderSel').classList.toggle('none', !f);
+  $('folderSw').hidden = !f;
+  if (f) $('folderSw').style.background = `var(--f-${colorOf(f)})`;
   $('folderSel').hidden = false;
   $('folderNew').hidden = true;
 }
@@ -666,9 +873,10 @@ function openNote(id, startMode) {
   resetDeleteBtn();
   $('empty').hidden = true;
   $('editor').hidden = false;
+  $('modeTabs').hidden = false;
+  $('backSection').hidden = false;
   $('title').value = note.title;
   $('content').value = note.content;
-  $('typeSel').value = note.type;
   renderFolderSel();
   $('saveState').textContent = '';
   setMode(startMode || (mode === 'map' ? 'map' : note.content.trim() ? 'view' : 'edit'));
@@ -684,6 +892,8 @@ function closeNote() {
   currentId = null;
   $('editor').hidden = true;
   $('empty').hidden = false;
+  $('modeTabs').hidden = true;
+  $('backSection').hidden = true;
   $('app').classList.remove('show-main');
   renderList();
 }
@@ -759,11 +969,12 @@ function renderMap() {
   const info = new Map();
   for (const id of level.keys()) {
     const n = getNote(id), isRoot = id === root.id;
-    const full = id === 'pending' ? '' : n ? (n.title.trim() || '(제목 없음)') : id.slice(id.indexOf('|') + 1);
+    const full = id === 'pending' ? '' : n ? (n.title.trim() || '(Untitled)') : id.slice(id.indexOf('|') + 1);
     const label = full.length > 18 ? full.slice(0, 17) + '…' : full;
-    const icon = n ? TYPES[n.type].icon + ' ' : '';
-    const w = id === 'pending' ? 180 : Math.min(280, 26 + (n ? 20 : 0) + label.length * (isRoot ? 16 : 13.5));
-    info.set(id, { n, full, label, icon, w, h: isRoot ? 44 : 32 });
+    // 글자 너비 어림: 한글은 넓게, 영문·숫자는 좁게 (부산단디명조 굵게 + 자간)
+    const units = [...label].reduce((s, ch) => s + (/[ㄱ-힣]/.test(ch) ? 1 : 0.62), 0);
+    const w = id === 'pending' ? 180 : Math.min(300, 30 + units * (isRoot ? 17.5 : 15.5));
+    info.set(id, { n, full, label, w, h: isRoot ? 44 : 34 });
   }
 
   // 3) 자리 정하기: 단계마다 오른쪽으로 한 줄씩, 가지 끝 메모는 위에서 아래로 차례차례
@@ -796,14 +1007,19 @@ function renderMap() {
     const i = info.get(id), l = level.get(id);
     const cls = ['mm-node', id === root.id && 'root', l === 1 && 'l1', id === mapSel && 'sel',
       !i.n && id !== 'pending' && 'missing', id === 'pending' && 'pending'].filter(Boolean).join(' ');
+    // 종이 카드: 맨 앞 카드는 메모 종류 색으로 칠하고, 나머지는 흰 카드에 왼쪽 색 띠
+    const isRoot = id === root.id, top = p.y - i.h / 2;
+    const fill = isRoot && i.n ? ` style="fill:var(--${i.n.type})"` : '';
+    const bar = i.n && !isRoot ? `<rect class="bar" x="${p.x}" y="${top}" width="4" height="${i.h}" style="fill:var(--${i.n.type})"/>` : '';
+    const ink = isRoot && i.n ? ` style="fill:var(--${i.n.type}-ink)"` : '';
     return `<g class="${cls}" data-id="${esc(id)}">
       <title>${esc(i.full)}${i.n || id === 'pending' ? '' : ' (아직 없는 메모 · 더블클릭하면 만들어져요)'}</title>
-      <rect class="${i.n ? 't-' + i.n.type : ''}" x="${p.x}" y="${p.y - i.h / 2}" width="${i.w}" height="${i.h}" rx="6"/>
-      <text x="${p.x + 12}" y="${p.y}">${i.icon}${esc(i.label)}</text></g>`;
+      <rect class="box" x="${p.x}" y="${top}" width="${i.w}" height="${i.h}" rx="3"${fill}/>${bar}
+      <text x="${p.x + 14}" y="${p.y}"${ink}>${esc(i.label)}</text></g>`;
   });
   const width = colX[colX.length - 1] + colW[colW.length - 1] + PAD;
   const lonely = pos.size === 1
-    ? `<text x="${PAD + info.get(root.id).w + 20}" y="${PAD + ROW / 2}" fill="var(--muted)" font-size="14" dominant-baseline="central">← Tab 을 눌러 첫 하위 메모를 만들어 보세요</text>` : '';
+    ? `<text class="mm-lonely" x="${PAD + info.get(root.id).w + 20}" y="${PAD + ROW / 2}" dominant-baseline="central">← Press Tab to add a child note</text>` : '';
   const canvas = $('mapCanvas');
   canvas.innerHTML = `<svg width="${width + (lonely ? 340 : 0)}" height="${nextY + PAD}">${edges.join('')}${boxes.join('')}${lonely}</svg>`;
   mapTree = { level, parent, children };
@@ -814,7 +1030,7 @@ function renderMap() {
     const p = pos.get(id), i = info.get(id);
     const input = document.createElement('input');
     input.className = 'mm-input';
-    input.placeholder = '새 메모 제목';
+    input.placeholder = 'New note title';
     input.value = edit.kind === 'rename' ? getNote(id).title : '';
     Object.assign(input.style, { left: p.x + 'px', top: (p.y - i.h / 2) + 'px', width: Math.max(200, i.w) + 'px', height: i.h + 'px' });
     canvas.appendChild(input);
@@ -951,24 +1167,28 @@ $('mapCanvas').addEventListener('keydown', e => {
   e.preventDefault();
 });
 
+// 카드 위쪽: 메모 번호와 고친 날, 분류 줄의 연결 수
 function renderMeta() {
   const n = getNote(currentId);
-  const f = t => new Date(t).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
-  $('noteMeta').textContent = `번호 ${n.id} · 만든 날 ${f(n.created)} · 고친 날 ${f(n.updated)}`;
+  const d = new Date(n.updated), p = x => String(x).padStart(2, '0');
+  $('noteNo').textContent = /^\d{12,}$/.test(n.id) ? `No. ${n.id.slice(0, 8)}-${n.id.slice(8, 12)}` : `No. ${n.id}`;
+  $('noteEdited').textContent = `Edited ${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const links = neighborsOf(n).length;
+  $('linkCount').textContent = `${links} ${links === 1 ? 'link' : 'links'}`;
 }
 
 function renderBacklinks() {
   const note = getNote(currentId);
   const list = backlinksOf(note);
   if (!list.length) {
-    $('backlinks').innerHTML = '<li class="muted" style="cursor:default">아직 이 메모를 가리키는 메모가 없어요. 다른 메모에서 [[' + esc(note.title || '이 메모 제목') + ']] 이라고 적어 보세요.</li>';
+    $('backlinks').innerHTML = `<li class="bempty">No notes link here yet. Write [[${esc(note.title || 'this title')}]] in another note.</li>`;
     return;
   }
+  // 작은 색인 카드: 위쪽 띠는 메모 종류 색, 아래에 링크가 들어 있는 줄
   $('backlinks').innerHTML = list.map(n => {
-    // 링크가 들어 있는 줄을 함께 보여 주기
     const line = n.content.split('\n').find(l => linksIn({ content: l }).some(t => sameTitle(t, note.title))) || '';
-    return `<li data-id="${n.id}"><b>${TYPES[n.type].icon} ${esc(n.title) || '(제목 없음)'}</b>
-      <div class="ctx">${esc(line.trim())}</div></li>`;
+    return `<li class="bcard" data-id="${n.id}" style="--k:var(--${n.type})"><div class="bt">${esc(n.title) || '(Untitled)'}</div>
+      <div class="bs">${esc(line.trim())}</div></li>`;
   }).join('');
 }
 
@@ -989,7 +1209,7 @@ function inline(raw) {
     const t = m[1].trim();
     out += fmt(raw.slice(last, m.index));
     out += `<a href="#" class="wl${findByTitle(t) ? '' : ' missing'}" data-title="${esc(t)}"
-      title="${findByTitle(t) ? '눌러서 이동' : '아직 없는 메모예요. 누르면 만들어져요'}">${esc(t)}</a>`;
+      title="${findByTitle(t) ? 'Open note' : 'Not written yet — click to create'}">${esc(t)}</a>`;
     last = m.index + m[0].length;
   }
   return out + fmt(raw.slice(last));
@@ -1009,7 +1229,7 @@ function renderMarkdown(md) {
     else if (line.trim()) html += `<p>${inline(line)}</p>`;
   }
   if (inList) html += '</ul>';
-  return html || '<p class="muted">내용이 없어요. ✏️ 쓰기를 눌러 적어 보세요.</p>';
+  return html || '<p class="empty-note">Nothing here yet. Open Write to start.</p>';
 }
 
 // =====================================================
@@ -1027,8 +1247,8 @@ function checkAC() {
   acItems = notes
     .filter(n => n.id !== currentId && n.title.trim() && n.title.toLowerCase().includes(q))
     .slice(0, 8)
-    .map(n => ({ title: n.title, label: `${TYPES[n.type].icon} ${esc(n.title)}` }));
-  if (q && !findByTitle(acQuery)) acItems.push({ title: acQuery.trim(), label: `➕ "${esc(acQuery.trim())}" 새 메모로 연결` });
+    .map(n => ({ title: n.title, label: `<span class="ac-name">${esc(n.title)}</span><span class="ac-type">${TYPES[n.type].label.toUpperCase()}</span>` }));
+  if (q && !findByTitle(acQuery)) acItems.push({ title: acQuery.trim(), label: `<span class="ac-name">+ Link as new note “${esc(acQuery.trim())}”</span>` });
   if (!acItems.length) return hideAC();
   acIndex = 0;
   drawAC();
@@ -1132,7 +1352,7 @@ $('title').addEventListener('blur', commitTitle);
 window.addEventListener('pagehide', commitTitle);
 document.addEventListener('visibilitychange', () => { if (document.hidden) commitTitle(); });
 
-$('typeSel').innerHTML = Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label} 메모</option>`).join('');
+$('typeSel').innerHTML = Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
 $('typeSel').addEventListener('change', () => {
   const note = getNote(currentId);
   note.type = $('typeSel').value;
@@ -1152,6 +1372,7 @@ $('folderSel').addEventListener('change', () => {
   }
   note.folder = $('folderSel').value;
   touch(note);
+  renderFolderSel();   // 폴더 색 네모도 함께 바꿔요
 });
 let folderNewDone = false;
 function finishFolderNew(value) {
@@ -1194,6 +1415,8 @@ $('backlinks').addEventListener('click', e => {
   if (li) openNote(li.dataset.id);
 });
 $('list').addEventListener('click', e => {
+  const pick = e.target.closest('[data-pick]');   // 색 고르기에서 색을 눌렀어요
+  if (pick) return setFolderColor(pick.dataset.folder, pick.dataset.pick);
   const head = e.target.closest('.folder-head');
   const act = e.target.closest('[data-fact]');
   if (act) return folderAction(act.dataset.fact, head.dataset.folder);
@@ -1207,9 +1430,10 @@ $('list').addEventListener('click', e => {
   const li = e.target.closest('li[data-id]');
   if (li) openNote(li.dataset.id);
 });
-$('filters').addEventListener('click', e => {
-  const b = e.target.closest('button');
-  if (b) { filter = b.dataset.type; folderEdit = null; folderArm = null; renderList(); }
+// 위에 겹친 종이를 누르면 그 종류가 맨 아래 큰 종이로 내려와요
+$('sheets').addEventListener('click', e => {
+  const s = e.target.closest('[data-type]');
+  if (s) { filter = s.dataset.type; folderEdit = null; folderArm = null; folderPalette = null; renderList(); $('list').scrollTop = 0; }
 });
 $('search').addEventListener('input', renderList);
 $('sortSel').value = sortMode;
@@ -1219,12 +1443,14 @@ $('sortSel').addEventListener('change', () => {
   renderList();
 });
 
-$('newBtn').addEventListener('click', () => {
+function newNote() {
   const note = createNote('', filter in TYPES ? filter : 'fleeting');
   $('search').value = '';
   openNote(note.id, 'edit');
   $('title').focus();
-});
+}
+$('newBtn').addEventListener('click', newNote);
+$('newBtnSide').addEventListener('click', newNote);   // 핸드폰에서는 목록 화면 위쪽에 있어요
 $('backBtn').addEventListener('click', closeNote);
 
 // 삭제는 두 번 눌러야 돼요: 첫 번째는 "정말요?" 확인, 두 번째에 진짜 삭제
@@ -1233,13 +1459,13 @@ let deleteTimer = null;
 function resetDeleteBtn() {
   clearTimeout(deleteTimer);
   $('deleteBtn').classList.remove('armed');
-  $('deleteBtn').textContent = '삭제';
+  $('deleteBtn').textContent = 'Delete';
 }
 $('deleteBtn').addEventListener('click', () => {
   const btn = $('deleteBtn');
   if (!btn.classList.contains('armed')) {
     btn.classList.add('armed');
-    btn.textContent = '정말 지울까요? 한 번 더 누르기';
+    btn.textContent = 'Delete? Click again';
     deleteTimer = setTimeout(resetDeleteBtn, 3000);   // 3초 안에 안 누르면 원래대로
     return;
   }
@@ -1298,7 +1524,7 @@ $('importInput').addEventListener('change', async e => {
     if (currentId) openNote(currentId);
     toast(`새 메모 ${added}개, 더 최신으로 바뀐 메모 ${replaced}개`);
   } catch {
-    toast('⚠️ Zettelkasten 백업 파일이 아니에요');
+    toast('Zettelkasten 백업 파일이 아니에요');
   }
 });
 
@@ -1406,7 +1632,7 @@ function moveNoteToFolder(id, folderId) {
   renderList();
   if (id === currentId) renderFolderSel();
   const name = note.title || '(제목 없음)';
-  toast(folderId ? `"${name}"을(를) 📁 ${getFolder(folderId).name} 폴더에 넣었어요` : `"${name}"을(를) 폴더 밖으로 꺼냈어요`);
+  toast(folderId ? `"${name}"을(를) "${getFolder(folderId).name}" 폴더에 넣었어요` : `"${name}"을(를) 폴더 밖으로 꺼냈어요`);
 }
 
 // 폴더를 다른 폴더 안으로 (folderId가 ''이면 맨 위로)
@@ -1421,7 +1647,7 @@ function moveFolderInto(id, folderId) {
   saveNow();
   renderList();
   if (currentId) renderFolderSel();
-  toast(folderId ? `📁 ${f.name} 폴더를 📁 ${getFolder(folderId).name} 안으로 옮겼어요` : `📁 ${f.name} 폴더를 맨 위로 꺼냈어요`);
+  toast(folderId ? `"${f.name}" 폴더를 "${getFolder(folderId).name}" 안으로 옮겼어요` : `"${f.name}" 폴더를 맨 위로 꺼냈어요`);
 }
 
 // 브라우저가 글자를 따로 끌고 가지 않게 막아요 (우리 끌기 기능만 쓰도록)
@@ -1448,9 +1674,9 @@ enableDrag($('list'), {
   },
   label(el, drop) {
     const isFolder = el.classList.contains('folder-head');
-    const what = isFolder ? `📁 ${getFolder(el.dataset.folder)?.name}` : `📄 ${getNote(el.dataset.id)?.title || '(제목 없음)'}`;
+    const what = isFolder ? `[${getFolder(el.dataset.folder)?.name}]` : (getNote(el.dataset.id)?.title || '(Untitled)');
     if (!drop) return what;
-    return drop.folderId ? `${what}  →  📁 ${getFolder(drop.folderId)?.name}` : `${what}  →  ${isFolder ? '맨 위로' : '폴더 밖으로'}`;
+    return drop.folderId ? `${what}  →  [${getFolder(drop.folderId)?.name}]` : `${what}  →  ${isFolder ? '맨 위로' : '폴더 밖으로'}`;
   },
   drop: (el, drop) => el.classList.contains('folder-head')
     ? moveFolderInto(el.dataset.folder, drop.folderId)
@@ -1556,7 +1782,7 @@ enableDrag($('mapCanvas'), {
     $('dropBar').hidden = true;
   },
   label(el, drop) {
-    const s = nodeTitle(el.dataset.id) || '(제목 없음)';
+    const s = nodeTitle(el.dataset.id) || '(Untitled)';
     if (!drop) return s;
     const t = nodeTitle(drop.tid);
     const how = drop.where === 'child' ? `"${t}" 아래로` : `"${t}" ${drop.where === 'before' ? '위' : '아래'}에 같은 단계로`;
@@ -1583,7 +1809,7 @@ const sync = {
 const cleanNote = d => ({ id: String(d.id), type: d.type in TYPES ? d.type : 'fleeting', title: String(d.title || ''),
   content: String(d.content || ''), folder: String(d.folder || ''), created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
 const cleanFolder = d => ({ id: String(d.id), type: d.type in TYPES ? d.type : 'fleeting', name: String(d.name || ''),
-  parent: String(d.parent || ''), created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
+  parent: String(d.parent || ''), color: COLORS.includes(d.color) ? d.color : '', created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
 // 메모와 폴더를 같은 규칙으로 다루기 위한 설명서
 const KINDS = {
   notes:   { prefix: '',        clean: cleanNote,   get: () => notes,   set: v => { notes = v; } },
@@ -1666,21 +1892,23 @@ function applyRemote(changes, kind = 'notes') {
 // 왼쪽 아래 동기화 상태 표시
 function setSyncStatus(state, detail = '') {
   const text = {
-    local: '☁️ 동기화 꺼짐 · 이 기기에만 저장돼요',
-    signedOut: '☁️ 로그인하면 다른 기기와 맞춰져요',
-    connecting: '☁️ 연결 중…',
-    synced: `✅ 동기화됨 · ${detail}`,
-    pending: '⏳ 올리는 중…',
-    offline: '📴 오프라인 · 연결되면 저절로 맞춰져요',
-    error: `⚠️ ${detail}`,
+    local: 'Sync off · this device only',
+    signedOut: 'Sign in to sync your devices',
+    connecting: 'Connecting…',
+    synced: `Synced · ${detail}`,
+    pending: 'Uploading…',
+    offline: 'Offline · will sync when back online',
+    error: detail,   // 오류 설명은 무엇을 하면 되는지 알기 쉽게 한국어로 둬요
   }[state];
   $('syncText').textContent = text;
   $('syncText').title = text;
+  $('syncBox').classList.toggle('ok', state === 'synced');   // 왼쪽 점: 동기화되면 초록, 오류면 붉은색
+  $('syncBox').classList.toggle('err', state === 'error');
   const btn = $('syncBtn');
   // 로그인 전에 난 오류면 "다시 시도" 할 수 있게 로그인 버튼을 남겨 둬요
   const loginBtn = state === 'signedOut' || (state === 'error' && !sync.key);
   btn.hidden = !loginBtn && !['synced', 'pending', 'offline'].includes(state);
-  btn.textContent = loginBtn ? (state === 'error' ? '다시 로그인' : '구글로 로그인') : '로그아웃';
+  btn.textContent = loginBtn ? (state === 'error' ? 'Sign in again' : 'Sign in with Google') : 'Log out';
   btn.onclick = () => (loginBtn ? sync.login : sync.logout)?.();
 }
 
@@ -1688,7 +1916,7 @@ function setSyncStatus(state, detail = '') {
 //  11. 시작!
 // =====================================================
 saveNow();
-renderList();
+closeNote();   // 처음에는 빈 카드 + 목록으로 시작해요
 if (window.innerWidth > 760) openNote(notes.find(n => n.title === '사용법')?.id || notes[0]?.id);
 </script>
 
