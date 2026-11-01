@@ -757,10 +757,11 @@ function folderTreeHtml(shown) {
         `<button class="c-${c}${c === color ? ' on' : ''}" data-pick="${c}" data-folder="${f.id}" title="${c}"></button>`).join('')}</li>`;
       if (!open) continue;
       const making = folderEdit?.kind === 'new' && folderEdit.parent === f.id;
-      if (making) html += inputRow(depth + 1);
-      walk(f.id, depth + 1);   // 안에 있는 폴더 먼저
+      // 이 폴더에 바로 든 메모를 먼저, 그 아래에 안쪽 폴더를 보여 줘요 (메모가 어느 폴더 것인지 헷갈리지 않게)
       const inside = shown.filter(n => folderOf(n)?.id === f.id);
       html += inside.map(n => noteItem(n, '', true, depth)).join('');
+      if (making) html += inputRow(depth + 1);
+      walk(f.id, depth + 1);
       if (!inside.length && !making && !childFoldersOf(filter, f.id).length) {
         html += `<li class="empty-folder" data-folder="${f.id}" style="margin-left:${(depth + 1) * 18}px">Empty</li>`;
       }
