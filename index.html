@@ -83,7 +83,9 @@
   #list li.drag-tip:hover { background: none; }
 
   /* 끌어서 옮기기 */
-  #list li[data-id], .mm-node { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  /* 왼쪽 목록과 마인드맵 카드는 글자가 선택·드래그되지 않게 해요 (입력칸은 그대로 쓸 수 있어요) */
+  .sidebar, .mm-node { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .sidebar input { user-select: text; -webkit-user-select: text; }
   .drag-ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 10px; border-radius: 8px;
     background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,.2);
     font-size: 13px; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -232,9 +234,10 @@
               <button data-act="rename">✏️ 이름<kbd>F2</kbd></button>
               <button data-act="center">🎯 맨 앞으로</button>
               <button data-act="open">📄 내용 보기</button>
+              <button data-act="help" id="mapHelpBtn" title="마인드맵 사용법 보기/숨기기">❓ 사용법</button>
             </div>
             <div id="mapCanvas" tabindex="0"></div>
-            <p class="muted map-help">클릭: 고르기 · 더블클릭: 그 메모 쓰기 화면으로 · 방향키: 옮겨 다니기 · 새 이름을 적다가 Tab을 누르면 바로 그 아래 메모를 또 만들어요<br>
+            <p class="muted map-help" id="mapHelp" hidden>클릭: 고르기 · 더블클릭: 그 메모 쓰기 화면으로 · 방향키: 옮겨 다니기 · 새 이름을 적다가 Tab을 누르면 바로 그 아래 메모를 또 만들어요<br>
               🖐 카드를 끌어다 다른 카드에 놓기: <b>가운데</b> → 하위로 · <b>위/아래 끝</b> → 같은 단계로 · <b>Ctrl</b> 누른 채 → 예전 연결은 두고 연결만 추가 (핸드폰은 꾹 누른 뒤 끌기)</p>
           </div>
         </div>
@@ -597,7 +600,9 @@ function renderFolderSel() {
 function openNote(id, startMode) {
   const note = getNote(id);
   if (!note) return;
+  commitTitle();   // 보던 메모의 제목을 바꾸던 중이었으면 먼저 마무리해요
   currentId = id;
+  titleBeforeEdit = note.title;
   mapEdit = null;
   mapSel = id;
   resetDeleteBtn();
@@ -617,6 +622,7 @@ function openNote(id, startMode) {
 }
 
 function closeNote() {
+  commitTitle();
   currentId = null;
   $('editor').hidden = true;
   $('empty').hidden = false;
@@ -625,6 +631,7 @@ function closeNote() {
 }
 
 function setMode(m) {
+  commitTitle();
   mode = m;
   $('editTab').classList.toggle('on', m === 'edit');
   $('viewTab').classList.toggle('on', m === 'view');
@@ -832,6 +839,7 @@ function finishMapEdit(edit, text, thenChild) {
     else if (text !== note.title) {
       const changed = relinkTitle(note.title, text, note.id);
       note.title = text;
+      if (note.id === currentId) titleBeforeEdit = text;   // 연결은 방금 바꿨으니 다시 바꾸지 않게
       note.updated = Date.now();
       if (changed) toast(`다른 메모에 있던 연결 ${changed}개도 새 제목으로 바꿨어요`);
     }
@@ -857,6 +865,11 @@ $('map').addEventListener('click', e => {
   if (act === 'rename') return startRename(mapSel);
   if (act === 'center') return openNote(realize(mapSel), 'map');
   if (act === 'open') return openNote(realize(mapSel), 'view');
+  if (act === 'help') {   // 사용법은 버튼을 눌렀을 때만 보여 줘요
+    $('mapHelp').hidden = !$('mapHelp').hidden;
+    $('mapHelpBtn').classList.toggle('on', !$('mapHelp').hidden);
+    return focusMap();
+  }
   const node = e.target.closest('.mm-node');
   if (node && node.dataset.id !== 'pending') selectNode(node.dataset.id);
 });
@@ -1025,7 +1038,6 @@ $('ac').addEventListener('mousedown', e => {
   if (li) { e.preventDefault(); pickAC(Number(li.dataset.i)); }
 });
 
-$('title').addEventListener('focus', () => { titleBeforeEdit = getNote(currentId).title; });
 $('title').addEventListener('input', () => {
   const note = getNote(currentId);
   note.title = $('title').value;
@@ -1041,15 +1053,27 @@ function relinkTitle(oldT, newT, exceptId) {
   }
   return changed;
 }
-$('title').addEventListener('change', () => {
+// 제목 바꾸기 마무리: titleBeforeEdit(메모를 열었을 때의 제목)와 지금 제목이 다르면 연결을 바꿔요.
+// 입력칸을 떠날 때뿐 아니라 다른 메모를 열 때·목록으로 갈 때·화면을 바꿀 때·앱을 닫을 때도 불러요
+// (핸드폰은 버튼을 눌러도 입력칸을 "떠난" 것으로 치지 않을 때가 있어서요)
+function commitTitle() {
   const note = getNote(currentId);
+  if (!note) return;
   const oldT = titleBeforeEdit.trim(), newT = note.title.trim();
+  titleBeforeEdit = note.title;
   if (!oldT || !newT || oldT === newT) return;
+  if (notes.some(n => n.id !== note.id && sameTitle(n.title, oldT))) return;   // 옛 제목의 다른 메모가 있으면 그 연결은 그 메모 것이에요
+  if (notes.some(n => n.id !== note.id && sameTitle(n.title, newT))) {
+    return toast('같은 제목의 메모가 이미 있어서, 다른 메모의 연결은 바꾸지 않았어요');
+  }
   const changed = relinkTitle(oldT, newT, note.id);
-  titleBeforeEdit = newT;
   if (changed) { saveNow(); renderList(); toast(`다른 메모에 있던 연결 ${changed}개도 새 제목으로 바꿨어요`); }
   renderBacklinks();
-});
+}
+$('title').addEventListener('change', commitTitle);
+$('title').addEventListener('blur', commitTitle);
+window.addEventListener('pagehide', commitTitle);
+document.addEventListener('visibilitychange', () => { if (document.hidden) commitTitle(); });
 
 $('typeSel').innerHTML = Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label} 메모</option>`).join('');
 $('typeSel').addEventListener('change', () => {
@@ -1268,6 +1292,7 @@ function enableDrag(container, opts) {
     if (!pending) return;
     drag = { el: pending.el, id: pending.id, x: pending.x, y: pending.y, copy: false, drop: null, ghost: document.createElement('div') };
     pending = null;
+    window.getSelection()?.removeAllRanges();   // 혹시 선택된 글자가 있으면 풀어요
     drag.ghost.className = 'drag-ghost';
     document.body.appendChild(drag.ghost);
     document.body.classList.add('dragging');
@@ -1335,6 +1360,9 @@ function moveFolderInto(id, folderId) {
   if (currentId) renderFolderSel();
   toast(folderId ? `📁 ${f.name} 폴더를 📁 ${getFolder(folderId).name} 안으로 옮겼어요` : `📁 ${f.name} 폴더를 맨 위로 꺼냈어요`);
 }
+
+// 브라우저가 글자를 따로 끌고 가지 않게 막아요 (우리 끌기 기능만 쓰도록)
+document.querySelector('.sidebar').addEventListener('dragstart', e => e.preventDefault());
 
 enableDrag($('list'), {
   item: 'li[data-id], .folder-head',   // 메모도, 폴더도 끌 수 있어요
@@ -1565,7 +1593,10 @@ function applyRemote(changes, kind = 'notes') {
   if (!$('folderNew').hidden) return;   // 새 폴더 이름을 적는 중이면 건드리지 않아요
   renderFolderSel();
   const typing = ['title', 'content'].includes(document.activeElement?.id) || mapEdit;
-  if (currentChanged && !typing) openNote(currentId, mode);
+  if (currentChanged && !typing) {
+    titleBeforeEdit = getNote(currentId).title;   // 다른 기기에서 바뀐 제목이에요. 연결은 그 기기가 이미 바꿨어요
+    openNote(currentId, mode);
+  }
   else if (!typing) { renderBacklinks(); if (mode === 'map') renderMap(); else if (mode === 'view') setMode('view'); }
 }
 
