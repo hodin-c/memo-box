@@ -149,7 +149,7 @@
   .slip { position: relative; margin: 8px 0; padding: 9px 12px 10px; border-radius: 3px; box-shadow: var(--shadow); cursor: pointer;
     background-color: var(--paper); background-image: var(--grain); color: var(--ink); border-left: 3px solid var(--k, transparent); }
   .slip:hover { box-shadow: 0 1px 1px rgba(60, 45, 25, .1), 0 6px 14px rgba(60, 45, 25, .12); }
-  .slip.active { outline: 1.5px solid var(--ink-btn); outline-offset: -1.5px; }
+  .slip.active { outline: 1.5px solid #494643; outline-offset: -1.5px; }   /* 버튼 색(--ink-btn)보다 채도를 조금 낮춘 테두리 */
   .slip .row { display: flex; align-items: baseline; gap: 8px; }
   .slip .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
@@ -456,6 +456,9 @@ let collapsed = loadCollapsed();
 let folderEdit = null;         // 폴더 이름을 적는 중이면 { kind: 'new', type } 또는 { kind: 'rename', id }
 let folderArm = null;          // "지울까요?" 확인 중인 폴더 번호
 let folderPalette = null;      // 색 고르기를 펼쳐 둔 폴더 번호
+const DRAGTIP_KEY = 'memo-box-dragtip-v1';
+let dragTipDone = false;       // 목록에서 한 번이라도 끌어 봤는지 (그 뒤로는 끌기 설명을 숨겨요)
+try { dragTipDone = localStorage.getItem(DRAGTIP_KEY) === '1'; } catch {}
 let currentId = null;
 let filter = 'all';
 let mode = 'edit';
@@ -766,7 +769,7 @@ function folderTreeHtml(shown) {
   html += shown.filter(n => !folderOf(n)).map(n => noteItem(n, '', false)).join('');   // 폴더에 안 넣은 메모
   html += folderEdit?.kind === 'new' && !folderEdit.parent ? inputRow(0)
     : '<li class="new-row"><span class="new-note"><span class="plus"></span>New note</span><span class="new-folder"><span class="plus"></span>New folder</span></li>';
-  if (foldersOf(filter).length) html += '<li class="drag-tip">메모나 폴더를 끌어서 다른 폴더에 넣거나, 빈 곳에 놓아 맨 위로 꺼낼 수 있어요</li>';
+  if (!dragTipDone) html += '<li class="drag-tip">메모나 폴더를 끌어서 다른 폴더에 넣거나, 빈 곳에 놓아 맨 위로 꺼낼 수 있어요</li>';
   return html;
 }
 
@@ -1810,9 +1813,16 @@ enableDrag($('list'), {
     if (!drop) return what;
     return drop.folderId ? `${what}  →  [${getFolder(drop.folderId)?.name}]` : `${what}  →  ${isFolder ? '맨 위로' : '폴더 밖으로'}`;
   },
-  drop: (el, drop) => el.classList.contains('folder-head')
-    ? moveFolderInto(el.dataset.folder, drop.folderId)
-    : moveNoteToFolder(el.dataset.id, drop.folderId),
+  drop(el, drop) {
+    if (!dragTipDone) {   // 한 번 끌어 봤으면 목록 아래 설명은 이제 안 보여 줘요
+      dragTipDone = true;
+      try { localStorage.setItem(DRAGTIP_KEY, '1'); } catch {}
+      renderList();
+    }
+    el.classList.contains('folder-head')
+      ? moveFolderInto(el.dataset.folder, drop.folderId)
+      : moveNoteToFolder(el.dataset.id, drop.folderId);
+  },
 });
 
 // ----- 마인드맵: 카드를 끌어서 연결 바꾸기 -----
