@@ -128,7 +128,7 @@
     clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%); border-radius: 5px 0 0 0; }
   .folder-head .arrow { font-size: 9px; opacity: .6; width: 10px; flex-shrink: 0; }
   .folder-head .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
+    font-family: var(--sans); font-weight: 600; font-size: 13px; letter-spacing: 0; }
   .folder-head .count { font-family: var(--en); font-size: 11px; opacity: .7; }
   .swatch { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(42, 38, 33, .45); background: inherit;
     padding: 0; flex-shrink: 0; }
@@ -170,6 +170,10 @@
   #list.selecting .slip.checked { outline: 1.5px solid #494643; outline-offset: -1.5px; }
   #list.selecting .slip.active:not(.checked) { outline: none; }
   #list.selecting .new-row, #list.selecting .drag-tip { display: none; }
+  /* 진한 종이(Index·Reference) 위에서는 짙은 강조선이 묻히니, 밝은 크림색 선을 카드 바깥에 둘러요 */
+  .sheet.t-index .slip.active, .sheet.t-literature .slip.active,
+  .sheet.t-index #list.selecting .slip.checked, .sheet.t-literature #list.selecting .slip.checked { outline: 2px solid #F3ECDF; outline-offset: 1px; }
+  .sheet.t-index #list.selecting .slip.active:not(.checked), .sheet.t-literature #list.selecting .slip.active:not(.checked) { outline: none; }
   .slip .row { display: flex; align-items: baseline; gap: 8px; }
   .slip .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
@@ -190,7 +194,7 @@
   .plus::after { width: 1.3px; height: 8px; }
   .folder-edit { margin: 10px 0; }
   .folder-input { width: 100%; padding: 6px 9px; border: 1.5px solid var(--ink-btn); border-radius: 6px; outline: none;
-    background: var(--paper); color: var(--ink); font-family: var(--title); font-size: 13px; letter-spacing: var(--title-spacing); }
+    background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 13px; letter-spacing: 0; }
   #list .drag-tip { font-size: 11px; opacity: .75; margin-top: 10px; cursor: default; line-height: 1.5; }
 
   /* 동기화, 내보내기 */
@@ -255,20 +259,28 @@
   .type-pill select option { background: var(--paper); color: var(--ink); }
   .folder-pill { height: 24px; padding: 0 10px; border: 1px solid var(--edge); }   /* 좌우 여백 같게 */
   .folder-pill .sw { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-  .folder-pill select, .folder-pill input { padding: 4px 0 6px 0; font-family: var(--title); font-weight: 400; font-size: 12px;
-    letter-spacing: var(--title-spacing); color: var(--ink); }
-  .folder-pill select.none { padding-top: 6px; padding-bottom: 4px; font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); }
+  /* 폴더 이름은 Pretendard로, 줄 높이를 알약 안쪽 높이에 맞춰서 글자 아래가 잘리지 않게 */
+  .folder-pill select, .folder-pill input { height: 22px; line-height: 22px; padding: 0; font-family: var(--sans); font-weight: 500; font-size: 11.5px;
+    letter-spacing: 0; color: var(--ink); }
+  .folder-pill select.none { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); }
   .folder-pill input { width: 140px; cursor: text; }
   .double { border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); height: 4px; margin: 18px 0 8px; }
 
   .editor-area { position: relative; }
   #content { display: block; width: 100%; min-height: 300px; resize: vertical; border: none; outline: none; background: transparent; padding: 0;
     font-size: 15.5px; line-height: 32px; color: var(--ink); }
+  #content { tab-size: 4; }
   #content::placeholder { color: var(--ink-soft); opacity: .6; }
+  /* 쓰기 화면 위 글 꾸미기 버튼 (마인드맵 버튼과 같은 모양) */
+  .map-bar.fmt-bar { margin: 0 0 8px; }
+  .fmt-bar[hidden] { display: none; }
+  .fmt-bar b, .fmt-bar i, .fmt-bar u { font-family: var(--sans); font-size: 12px; }
   .preview { min-height: 300px; font-size: 15.5px; line-height: 32px; }
   .preview p { margin: 0 0 16px; }
   .preview h2, .preview h3, .preview h4 { font-family: var(--title); letter-spacing: .06em; margin: 22px 0 8px; line-height: 1.4; }
-  .preview ul { margin: 0 0 16px; padding-left: 22px; }
+  .preview ul, .preview ol { margin: 0 0 16px; padding-left: 24px; }
+  .preview li > ul, .preview li > ol { margin: 0; }   /* 들여 쓴 목록은 바로 아래에 붙여서 */
+  .preview u { text-underline-offset: 3px; }
   .preview code { background: var(--paper-2); padding: 1px 5px; border-radius: 4px; }
   .preview .empty-note { color: var(--ink-soft); }
   .wl { color: inherit; text-decoration: underline; text-decoration-color: var(--clay-text); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
@@ -327,8 +339,7 @@
   .mm-node text { fill: var(--ink); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em;
     dominant-baseline: alphabetic; pointer-events: none; }
   .mm-node.root text { font-size: 15px; }
-  .mm-node.sel rect.edge { stroke: #5E554B; stroke-width: 2; }   /* 갈색 기운이 도는, 너무 짙지 않은 강조선 */
-  .mm-node.missing rect.edge { stroke: var(--clay-text); stroke-dasharray: 4 3; stroke-width: 1.2; }
+  .mm-node.sel rect.edge { stroke: #5E554B; stroke-width: 2; }   /* 갈색 기운이 도는, 너무 짙지 않은 강조선 */  .mm-node.missing rect.edge { stroke: var(--clay-text); stroke-dasharray: 4 3; stroke-width: 1.2; }
   .mm-node.missing text { fill: var(--clay-text); }
   .mm-node.pending rect.edge { stroke: var(--ink-btn); stroke-dasharray: 5 4; }
   .mm-input { position: absolute; box-sizing: border-box; padding: 0 10px; border: 1.5px solid var(--ink-btn); border-radius: 4px; outline: none;
@@ -426,6 +437,17 @@
               <span id="linkCount"></span>
             </div>
             <div class="double"></div>
+            <div class="map-bar fmt-bar" id="fmtBar" hidden>
+              <button data-fmt="bold" title="굵게 (Ctrl+B)"><span class="lb"><b>B</b></span></button>
+              <button data-fmt="italic" title="기울임 (Ctrl+I)"><span class="lb"><i>I</i></span></button>
+              <button data-fmt="underline" title="밑줄 (Ctrl+U)"><span class="lb"><u>U</u></span></button>
+              <span class="sep"></span>
+              <button data-fmt="bullet" title="글머리 기호 목록 (줄 앞에 - 를 적어도 돼요)"><span class="lb">• List</span></button>
+              <button data-fmt="number" title="번호 목록 (줄 앞에 1. 을 적어도 돼요)"><span class="lb">1. List</span></button>
+              <span class="sep"></span>
+              <button data-fmt="indent" title="들여쓰기"><span class="lb">Indent</span><kbd>Tab</kbd></button>
+              <button data-fmt="outdent" title="내어쓰기"><span class="lb">Outdent</span><kbd>Shift+Tab</kbd></button>
+            </div>
             <div class="editor-area">
               <textarea id="content" placeholder="Write your thought here. Type [[ to link another note."></textarea>
               <ul id="ac" class="ac" hidden></ul>
@@ -447,7 +469,7 @@
                   카드를 끌어다 다른 카드에 놓기: <b>가운데</b> → 하위로 · <b>위/아래 끝</b> → 같은 단계로 · <b>Ctrl</b> 누른 채 → 예전 연결은 두고 연결만 추가 (핸드폰은 꾹 누른 뒤 끌기)</p>
               </div>
             </div>
-            <div class="foot"><span id="hint">Type [[ to link another note · **bold** · # heading · - list</span><span class="sp"></span><button id="deleteBtn" class="btn-del" title="메모 지우기 (Alt+Delete)">Delete</button></div>
+            <div class="foot"><span id="hint">[[ link · **bold** · *italic* · __underline__ · - list · 1. list · # heading</span><span class="sp"></span><button id="deleteBtn" class="btn-del" title="메모 지우기 (Alt+Delete)">Delete</button></div>
           </div>
         </article>
       </div>
@@ -1010,6 +1032,7 @@ function setMode(m) {
   $('viewTab').classList.toggle('on', m === 'view');
   $('content').hidden = m !== 'edit';
   $('hint').hidden = m !== 'edit';
+  $('fmtBar').hidden = m !== 'edit';
   $('mapTab').classList.toggle('on', m === 'map');
   $('preview').hidden = m !== 'view';
   $('map').hidden = m !== 'map';
@@ -1318,10 +1341,13 @@ function renderBacklinks() {
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// **굵게** · *기울임* · __밑줄__ · `코드`
 function fmt(s) {
   return esc(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
+    .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>');
 }
 function inline(raw) {
   let out = '', last = 0;
@@ -1334,21 +1360,34 @@ function inline(raw) {
   }
   return out + fmt(raw.slice(last));
 }
+// 줄 앞 들여쓰기 단계: 탭 하나 또는 띄어쓰기 두 칸 = 한 단계
+const indentLevel = lead => [...lead].reduce((n, c) => n + (c === '\t' ? 2 : 1), 0) >> 1;
 function renderMarkdown(md) {
-  let html = '', inList = false;
+  let html = '';
+  const open = [];   // 지금 열려 있는 목록들 { tag: 'ul'|'ol', level }
+  const closeAbove = level => { while (open.length && open.at(-1).level > level) html += `</li></${open.pop().tag}>`; };
   for (const line of md.split('\n')) {
-    const item = line.match(/^\s*[-*]\s+(.*)$/);
+    const lead = line.match(/^[\t ]*/)[0], level = indentLevel(lead);
+    // "- 글", "* 글", "• 글" → 글머리 목록 / "1. 글", "1) 글" → 번호 목록. 들여 쓰면 한 단계 안쪽 목록이 돼요
+    const item = line.slice(lead.length).match(/^(?:([-*•])|(\d+)[.)])\s+(.*)$/);
     if (item) {
-      if (!inList) { html += '<ul>'; inList = true; }
-      html += `<li>${inline(item[1])}</li>`;
+      const tag = item[1] ? 'ul' : 'ol';
+      closeAbove(level);
+      if (open.at(-1)?.level === level && open.at(-1).tag !== tag) html += `</li></${open.pop().tag}>`;
+      if (open.at(-1)?.level === level) html += '</li>';
+      else {
+        html += tag === 'ol' && item[2] !== '1' ? `<ol start="${Number(item[2])}">` : `<${tag}>`;
+        open.push({ tag, level });
+      }
+      html += `<li>${inline(item[3])}`;
       continue;
     }
-    if (inList) { html += '</ul>'; inList = false; }
+    closeAbove(-1);
     const h = line.match(/^(#{1,3})\s+(.*)$/);
     if (h) html += `<h${h[1].length + 1}>${inline(h[2])}</h${h[1].length + 1}>`;
-    else if (line.trim()) html += `<p>${inline(line)}</p>`;
+    else if (line.trim()) html += `<p${level ? ` style="padding-left:${level * 1.5}em"` : ''}>${inline(line.slice(lead.length))}</p>`;
   }
-  if (inList) html += '</ul>';
+  closeAbove(-1);
   return html || '<p class="empty-note">Nothing here yet. Open Write to start.</p>';
 }
 
@@ -1783,10 +1822,100 @@ $('title').addEventListener('keydown', e => {
   ta.focus();
   ta.selectionStart = ta.selectionEnd = ta.value.length;
 });
+// ----- 쓰기 화면 글 꾸미기 -----
+// 글을 바꿀 때는 브라우저의 "입력" 명령을 써서 Ctrl+Z(되돌리기)가 그대로 되게 해요
+function editContent(start, end, text, selStart, selEnd) {
+  const ta = $('content');
+  ta.focus();
+  ta.setSelectionRange(start, end);
+  const ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
+  if (!ok) { ta.setRangeText(text, start, end); ta.dispatchEvent(new Event('input')); }
+  ta.setSelectionRange(selStart, selEnd);
+}
+// 고른 글을 **…** 처럼 감싸기. 이미 감싸져 있으면 풀어요
+function toggleWrap(mark) {
+  const ta = $('content'), v = ta.value, s = ta.selectionStart, e = ta.selectionEnd, m = mark.length, sel = v.slice(s, e);
+  const wrappedOutside = v.slice(s - m, s) === mark && v.slice(e, e + m) === mark
+    && !(mark === '*' && (v[s - m - 1] === '*' || v[e + m] === '*'));   // **굵게**의 별표를 기울임으로 착각하지 않게
+  if (wrappedOutside) return editContent(s - m, e + m, sel, s - m, e - m);
+  if (sel.length >= 2 * m && sel.startsWith(mark) && sel.endsWith(mark)) return editContent(s, e, sel.slice(m, -m), s, e - 2 * m);
+  editContent(s, e, mark + sel + mark, s + m, e + m);
+}
+// 커서가 있는 줄(여러 줄을 골랐으면 그 줄 모두)을 fn으로 바꿔요. 바뀐 게 없으면 false
+function editLines(fn) {
+  const ta = $('content'), v = ta.value, s = ta.selectionStart, e = ta.selectionEnd;
+  const a = v.lastIndexOf('\n', s - 1) + 1;
+  let b = v.indexOf('\n', e > s && v[e - 1] === '\n' ? e - 1 : e);
+  if (b < 0) b = v.length;
+  const before = v.slice(a, b), lines = before.split('\n'), text = fn(lines).join('\n');
+  if (text === before) return false;
+  if (lines.length === 1) {   // 한 줄이면 커서를 글자와 함께 옮기고, 여러 줄이면 바뀐 줄을 모두 골라 둬요
+    const d = text.length - before.length;
+    editContent(a, b, text, Math.max(a, s + d), Math.max(a, e + d));
+  } else editContent(a, b, text, a, a + text.length);
+  return true;
+}
+const LIST_MARK = /^([-*•]|\d+[.)])\s+/;
+function toggleList(kind) {
+  const isKind = l => (kind === 'bullet' ? /^\s*[-*•]\s+/ : /^\s*\d+[.)]\s+/).test(l);
+  editLines(lines => {
+    if (lines.every(l => !l.trim())) return lines.map(l => l + (kind === 'bullet' ? '- ' : '1. '));   // 빈 줄이면 표시만 붙여요
+    const all = lines.filter(l => l.trim()).every(isKind);   // 모두 이미 그 목록이면 표시를 빼요
+    let n = 0;
+    return lines.map(l => {
+      if (!l.trim()) return l;
+      const lead = l.match(/^[\t ]*/)[0], body = l.slice(lead.length).replace(LIST_MARK, '');
+      return lead + (all ? '' : kind === 'bullet' ? '- ' : `${++n}. `) + body;
+    });
+  });
+}
+const indentLines = () => editLines(lines => lines.map(l => '\t' + l));
+const outdentLines = () => editLines(lines => lines.map(l => l.replace(/^(\t| {1,4})/, '')));
+
 $('content').addEventListener('keydown', e => {
-  if (e.key !== 'Tab' || !e.shiftKey || !$('ac').hidden || e.isComposing) return;   // [[ 자동완성이 열려 있으면 그쪽이 먼저
-  e.preventDefault();
-  $('title').focus();
+  if (!$('ac').hidden || e.isComposing) return;   // [[ 자동완성이 열려 있으면 그쪽이 먼저
+  const ta = $('content');
+  // Ctrl(맥은 Cmd)+B / I / U: 굵게 · 기울임 · 밑줄
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+    const mark = { KeyB: '**', KeyI: '*', KeyU: '__' }[e.code];
+    if (mark) { e.preventDefault(); toggleWrap(mark); }
+    return;
+  }
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  // Tab: 들여쓰기 · Shift+Tab: 내어쓰기 (더 내어 쓸 게 없으면 제목 칸으로)
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (!e.shiftKey) indentLines();
+    else if (!outdentLines()) $('title').focus();
+    return;
+  }
+  // 목록 줄에서 Enter: 다음 줄에도 같은 표시(- 나 다음 번호)를 붙여요. 빈 항목에서 Enter면 목록을 끝내요
+  if (e.key === 'Enter' && !e.shiftKey && ta.selectionStart === ta.selectionEnd) {
+    const v = ta.value, s = ta.selectionStart, a = v.lastIndexOf('\n', s - 1) + 1;
+    const m = v.slice(a, s).match(/^([\t ]*)(?:([-*•])|(\d+)([.)]))\s+/);
+    if (!m) return;
+    e.preventDefault();
+    let b = v.indexOf('\n', s);
+    if (b < 0) b = v.length;
+    if (!v.slice(a + m[0].length, b).trim()) {   // 빈 항목: 들여 쓴 줄이면 한 단계 밖으로, 아니면 표시를 지워요
+      if (m[1]) outdentLines();
+      else editContent(a, b, '', a, a);
+      return;
+    }
+    const next = '\n' + m[1] + (m[2] ? m[2] + ' ' : `${Number(m[3]) + 1}${m[4]} `);
+    editContent(s, s, next, s + next.length, s + next.length);
+  }
+});
+$('fmtBar').addEventListener('mousedown', e => e.preventDefault());   // 버튼을 눌러도 글 쓰던 자리(커서)가 그대로 있게
+$('fmtBar').addEventListener('click', e => {
+  const f = e.target.closest('[data-fmt]')?.dataset.fmt;
+  if (!f) return;
+  if (f === 'bold') toggleWrap('**');
+  else if (f === 'italic') toggleWrap('*');
+  else if (f === 'underline') toggleWrap('__');
+  else if (f === 'bullet' || f === 'number') toggleList(f);
+  else if (f === 'indent') indentLines();
+  else if (f === 'outdent') outdentLines();
 });
 
 // =====================================================
