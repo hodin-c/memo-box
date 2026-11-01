@@ -28,6 +28,7 @@
     --ink: #2A2621;         /* 먹색 글씨 */
     --ink-soft: #6E665B;
     --ink-btn: #4B463F;     /* 진한 버튼, 고른 메모 테두리 */
+    --drop: #6B665F;        /* 끌어서 놓을 곳 표시 선 */
     --edge: rgba(42, 38, 33, .18);
     --shadow: 0 1px 1px rgba(60, 45, 25, .08), 0 4px 10px rgba(60, 45, 25, .08);
     --sheet-shadow: drop-shadow(0 -1px 1px rgba(50, 38, 24, .22)) drop-shadow(0 -3px 5px rgba(50, 38, 24, .10));
@@ -129,7 +130,7 @@
   .folder-head:hover .f-actions, .folder-head.arming .f-actions { display: flex; }
   /* 터치 화면(마우스 없음)에서는 늘 보이게, 대신 이름 뒤 제자리에 */
   @media (hover: none) { .f-actions { display: flex; position: static; padding-left: 0; background: none; } }
-  .f-actions button { white-space: nowrap; font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: .03em; padding: 2px 4px;
+  .f-actions button { white-space: nowrap; font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: 0; padding: 2px 3px;
     border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; }
   .f-actions button:hover { border-color: rgba(42, 38, 33, .3); background: rgba(255, 255, 255, .5); }
   .f-actions button.armed { background: var(--clay-text); border-color: var(--clay-text); color: #fff; }
@@ -157,9 +158,11 @@
   .slip .snip { font-size: 12px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #list .note-msg { font-size: 12px; opacity: .8; padding: 6px 4px; cursor: default; }
   #list .empty-folder { font-family: var(--en); font-size: 11px; opacity: .7; padding: 2px 0 6px; cursor: default; }
-  .new-folder { display: inline-flex; align-items: center; gap: 8px; margin: 12px 2px 4px; cursor: pointer; opacity: .85;
+  /* 목록 맨 아래: ⊕ New note   ⊕ New folder */
+  .new-row { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 12px 2px 4px; }
+  .new-note, .new-folder { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; opacity: .85;
     font-family: var(--en); font-weight: 700; font-size: 12px; letter-spacing: .08em; }
-  .new-folder:hover { opacity: 1; }
+  .new-note:hover, .new-folder:hover { opacity: 1; }
   /* 동그라미 안의 + (가는 선 두 개로 그려서 정가운데에) */
   .plus { position: relative; width: 18px; height: 18px; border: 1.3px solid currentColor; border-radius: 50%; flex-shrink: 0; }
   .plus::before, .plus::after { content: ''; position: absolute; left: 50%; top: 50%; background: currentColor; transform: translate(-50%, -50%); }
@@ -188,8 +191,10 @@
     font-family: var(--title); font-size: 13px; letter-spacing: .05em; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.dragging, body.dragging * { cursor: grabbing !important; }
   .drag-src { opacity: .4; }
-  .folder-head.drop-target { outline: 2px solid var(--ink-btn); outline-offset: 1px; }
-  #list.drop-target { outline: 2px dashed currentColor; outline-offset: -4px; border-radius: 6px; }
+  /* 끌어서 놓을 곳 표시: 채도 없는 차분한 먹색. 폴더는 탭까지 감싸는 선을 그려요 */
+  .drop-ring { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 3; }
+  .drop-ring path { fill: none; stroke: var(--drop); stroke-width: 2; stroke-linejoin: round; }
+  #list.drop-target { outline: 2px dashed var(--drop); outline-offset: -4px; border-radius: 6px; }
   .mm-node.drop-child rect.box { stroke: var(--ink-btn); stroke-width: 2.5; }
   .drop-bar { position: fixed; z-index: 49; height: 4px; background: var(--ink-btn); border-radius: 2px; pointer-events: none; }
 
@@ -337,7 +342,7 @@
       <div class="brand">Zettelkasten</div>
       <button id="newBtnSide" class="side-new mobile-only">New note</button>
     </div>
-    <input id="search" class="search" type="search" placeholder="Search titles and notes" autocomplete="off">
+    <input id="search" class="search" type="search" placeholder="Search titles and notes" title="검색 (Alt+F) · Esc로 지우기" autocomplete="off">
     <div class="stack">
       <div id="sheets"></div>
       <div class="sheet big" id="bigSheet">
@@ -368,12 +373,12 @@
         <div class="card-tabs">
           <button id="backBtn" class="ctab mobile-only">Back</button>
           <span id="modeTabs" style="display:contents">
-            <button class="ctab" id="editTab"><span class="k">01</span>Write</button>
-            <button class="ctab" id="viewTab"><span class="k">02</span>Read</button>
-            <button class="ctab" id="mapTab"><span class="k">03</span>Mind map</button>
+            <button class="ctab" id="editTab" title="쓰기 (Alt+1)"><span class="k">01</span>Write</button>
+            <button class="ctab" id="viewTab" title="보기 (Alt+2)"><span class="k">02</span>Read</button>
+            <button class="ctab" id="mapTab" title="마인드맵 (Alt+3)"><span class="k">03</span>Mind map</button>
           </span>
           <span class="sp"></span>
-          <button class="ctab dark" id="newBtn">New note</button>
+          <button class="ctab dark" id="newBtn" title="새 메모 (Alt+N)">New note</button>
         </div>
         <article class="card">
           <div id="empty">Pick a note on the left, or start a New note.</div>
@@ -407,7 +412,7 @@
                   카드를 끌어다 다른 카드에 놓기: <b>가운데</b> → 하위로 · <b>위/아래 끝</b> → 같은 단계로 · <b>Ctrl</b> 누른 채 → 예전 연결은 두고 연결만 추가 (핸드폰은 꾹 누른 뒤 끌기)</p>
               </div>
             </div>
-            <div class="foot"><span id="hint">Type [[ to link another note · **bold** · # heading · - list</span><span class="sp"></span><button id="deleteBtn" class="btn-del">Delete</button></div>
+            <div class="foot"><span id="hint">Type [[ to link another note · **bold** · # heading · - list</span><span class="sp"></span><button id="deleteBtn" class="btn-del" title="메모 지우기 (Alt+Delete)">Delete</button></div>
           </div>
         </article>
       </div>
@@ -702,6 +707,8 @@ function renderList() {
   if (filter !== 'all' && !q) html = folderTreeHtml(shown, q);   // 종류를 고르면 폴더별로 묶어서 보여 줘요
   else if (!shown.length) html = `<li class="note-msg">${q ? 'No matching notes' : 'No notes yet'}</li>`;
   else html = shown.map(n => noteItem(n, q, false)).join('');
+  // ALL 목록 맨 아래에도 New note (검색 중에는 빼요)
+  if (filter === 'all' && !q) html += '<li class="new-row"><span class="new-note"><span class="plus"></span>New note</span></li>';
 
   renderingList = true;
   $('list').innerHTML = html;
@@ -736,6 +743,7 @@ function folderTreeHtml(shown) {
         <span class="f-actions">
           <button data-fact="add" title="이 폴더에 새 메모">+NOTE</button>
           <button data-fact="subfolder" title="이 폴더 안에 폴더 만들기">+SUB</button>
+          <button data-fact="index" title="이 폴더(하위 폴더 포함)의 메모를 모두 링크한 INDEX 카드 만들기">INDEX</button>
           <button data-fact="rename" title="폴더 이름 바꾸기">EDIT</button>
           <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (안에 있던 것은 한 층 위로 꺼내요)">${arming ? 'SURE?' : 'DEL'}</button>
         </span>
@@ -756,7 +764,8 @@ function folderTreeHtml(shown) {
     }
   })('', 0);
   html += shown.filter(n => !folderOf(n)).map(n => noteItem(n, '', false)).join('');   // 폴더에 안 넣은 메모
-  html += folderEdit?.kind === 'new' && !folderEdit.parent ? inputRow(0) : '<li class="new-folder"><span class="plus"></span>New folder</li>';
+  html += folderEdit?.kind === 'new' && !folderEdit.parent ? inputRow(0)
+    : '<li class="new-row"><span class="new-note"><span class="plus"></span>New note</span><span class="new-folder"><span class="plus"></span>New folder</span></li>';
   if (foldersOf(filter).length) html += '<li class="drag-tip">메모나 폴더를 끌어서 다른 폴더에 넣거나, 빈 곳에 놓아 맨 위로 꺼낼 수 있어요</li>';
   return html;
 }
@@ -788,6 +797,8 @@ function folderAction(act, id) {
   if (act === 'color') {   // 색 고르기 열기/닫기
     folderPalette = folderPalette === id ? null : id;
     renderList();
+  } else if (act === 'index') {
+    makeIndexCard(f);
   } else if (act === 'add') {
     collapsed.delete(id);
     saveCollapsed();
@@ -832,6 +843,29 @@ function folderAction(act, id) {
       if (currentId) renderFolderSel();
     });
   }
+}
+
+// 폴더 하나(하위 폴더 포함)의 메모를 모두 링크로 모은 INDEX 카드 만들기
+// 폴더 구조는 제목(##, ###)으로, 메모는 "- [[제목]]" 목록으로 적고, 순서는 지금 고른 정렬을 따라요
+function makeIndexCard(folder) {
+  let count = 0;
+  const lines = [];
+  (function walk(f, depth) {
+    if (depth > 0) lines.push('', `${'#'.repeat(Math.min(depth + 1, 3))} ${f.name}`);
+    const inside = sortNotes(notes.filter(n => folderOf(n)?.id === f.id && n.title.trim()));
+    for (const n of inside) { lines.push(`- [[${n.title.trim()}]]`); count++; }
+    for (const sub of childFoldersOf(f.type, f.id)) walk(sub, depth + 1);
+  })(folder, 0);
+  if (!count) return toast(`"${folder.name}" 폴더에 제목이 있는 메모가 없어요`);
+
+  // 같은 제목이 이미 있으면 (2), (3)… 을 붙여요 (예전 INDEX 카드를 덮어쓰지 않게)
+  let title = `${folder.name} Index`;
+  for (let i = 2; findByTitle(title); i++) title = `${folder.name} Index (${i})`;
+  const note = createNote(title, 'index');
+  note.content = lines.join('\n').replace(/^\n+/, '');
+  saveNow();
+  openNote(note.id, 'view');
+  toast(`"${title}" 카드를 만들었어요 (메모 ${count}개 연결)`);
 }
 
 // 폴더 색 바꾸기
@@ -1448,6 +1482,7 @@ $('list').addEventListener('click', e => {
     return renderList();
   }
   if (e.target.closest('.new-folder')) { folderEdit = { kind: 'new', type: filter, value: '' }; return renderList(); }
+  if (e.target.closest('.new-note')) return newNote();   // 지금 고른 종류로, 폴더 없이 새 메모
   const li = e.target.closest('li[data-id]');
   if (li) openNote(li.dataset.id);
 });
@@ -1490,8 +1525,14 @@ $('deleteBtn').addEventListener('click', () => {
     deleteTimer = setTimeout(resetDeleteBtn, 3000);   // 3초 안에 안 누르면 원래대로
     return;
   }
+  deleteCurrentNote();
+});
+
+// 지금 열린 메모 지우기 (지운 뒤 6초 동안 되돌리기 가능)
+function deleteCurrentNote() {
   resetDeleteBtn();
   const note = getNote(currentId);
+  if (!note) return;
   const index = notes.indexOf(note);
   notes = notes.filter(n => n.id !== note.id);
   saveNow();
@@ -1502,6 +1543,65 @@ $('deleteBtn').addEventListener('click', () => {
     openNote(note.id);
     toast('메모를 되살렸어요');
   });
+}
+
+// ----- 단축키 -----
+// Alt+N 새 메모 · Alt+Delete 지우기(바로 지우고 "되돌리기"로 살릴 수 있어요) · Alt+1/2/3 Write/Read/Mind map
+// Alt+F 검색 · Alt+↑/↓ 목록의 이전/다음 메모 · Alt+I 메모 종류 바꾸기 · Esc 색 고르기 닫기/검색 지우기
+// e.code(키 위치)로 확인해서 한글 입력 중이거나 맥의 Option 키 특수문자가 나와도 똑같이 동작해요
+const TYPE_CYCLE = ['fleeting', 'literature', 'index', 'permanent'];
+function openSibling(step) {   // 왼쪽 목록에 보이는 순서대로 이전/다음 메모
+  const ids = [...document.querySelectorAll('#list .slip')].map(li => li.dataset.id);
+  if (!ids.length) return;
+  const i = ids.indexOf(currentId);
+  const next = ids[i < 0 ? 0 : Math.min(ids.length - 1, Math.max(0, i + step))];
+  if (next !== currentId) openNote(next);
+  document.querySelector(`#list .slip[data-id="${next}"]`)?.scrollIntoView({ block: 'nearest' });
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !e.defaultPrevented && !e.altKey) {   // 다른 칸이 Esc를 먼저 쓰지 않았을 때만
+    if (folderPalette) { folderPalette = null; renderList(); }
+    else if ($('search').value) { $('search').value = ''; renderList(); }
+    return;
+  }
+  if (!e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+  const act = {
+    KeyN: () => newNote(),
+    Delete: () => currentId && deleteCurrentNote(),
+    Digit1: () => currentId && $('editTab').click(),
+    Digit2: () => currentId && $('viewTab').click(),
+    Digit3: () => currentId && $('mapTab').click(),
+    KeyF: () => {   // 좁은 화면에서는 목록을 먼저 보여 줘요
+      commitTitle();
+      $('app').classList.remove('show-main');
+      $('search').focus(); $('search').select();
+    },
+    ArrowUp: () => openSibling(-1),
+    ArrowDown: () => openSibling(1),
+    KeyI: () => {
+      if (!currentId) return;
+      const sel = $('typeSel');
+      sel.value = TYPE_CYCLE[(TYPE_CYCLE.indexOf(sel.value) + 1) % TYPE_CYCLE.length];
+      sel.dispatchEvent(new Event('change'));
+      toast(`${TYPES[sel.value].label} 메모로 바꿨어요`);
+    },
+  }[e.code];
+  if (act) { e.preventDefault(); act(); }
+});
+
+// 제목 칸에서 Tab → 내용 칸으로 (보기·마인드맵 화면이면 쓰기 화면으로 바꿔서), 내용 칸에서 Shift+Tab → 제목 칸으로
+$('title').addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || e.shiftKey || e.isComposing) return;
+  e.preventDefault();
+  if (mode !== 'edit') setMode('edit');
+  const ta = $('content');
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = ta.value.length;
+});
+$('content').addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || !e.shiftKey || !$('ac').hidden || e.isComposing) return;   // [[ 자동완성이 열려 있으면 그쪽이 먼저
+  e.preventDefault();
+  $('title').focus();
 });
 
 // =====================================================
@@ -1671,6 +1771,15 @@ function moveFolderInto(id, folderId) {
   toast(folderId ? `"${f.name}" 폴더를 "${getFolder(folderId).name}" 안으로 옮겼어요` : `"${f.name}" 폴더를 맨 위로 꺼냈어요`);
 }
 
+// 폴더 모양(위쪽 탭 + 몸통)을 3px 바깥에서 따라 그린 선. 폴더 탭은 위로 9px, 윗변 50px에서 64px까지 비스듬히 내려와요
+function dropRing(w, h) {
+  const o = 3, r = 6;
+  const d = `M${-o} ${h - r} V${-9 - o + 5} Q${-o} ${-9 - o} ${-o + 5} ${-9 - o} H${50 + 1} L${64 + 2} ${-o}
+    H${w - r} Q${w + o} ${-o} ${w + o} ${r - o} V${h - r} Q${w + o} ${h + o} ${w - r} ${h + o}
+    H${r - o} Q${-o} ${h + o} ${-o} ${h - r} Z`;
+  return `<svg class="drop-ring" width="${w}" height="${h}"><path d="${d}"/></svg>`;
+}
+
 // 브라우저가 글자를 따로 끌고 가지 않게 막아요 (우리 끌기 기능만 쓰도록)
 document.querySelector('.sidebar').addEventListener('dragstart', e => e.preventDefault());
 
@@ -1685,12 +1794,14 @@ enableDrag($('list'), {
     const folderId = zone ? zone.dataset.folder : '';
     const dragFolder = el.classList.contains('folder-head') ? el.dataset.folder : null;
     if (dragFolder && folderId && isFolderInside(folderId, dragFolder)) return null;   // 자기 안으로는 못 넣어요
-    if (folderId) document.querySelector(`#list .folder-head[data-folder="${folderId}"]`)?.classList.add('drop-target');
-    else $('list').classList.add('drop-target');
+    if (folderId) {
+      const head = document.querySelector(`#list .folder-head[data-folder="${folderId}"]`);
+      if (head) head.insertAdjacentHTML('beforeend', dropRing(head.offsetWidth, head.offsetHeight));
+    } else $('list').classList.add('drop-target');
     return { folderId };
   },
   clear() {
-    document.querySelectorAll('#list .drop-target').forEach(x => x.classList.remove('drop-target'));
+    document.querySelectorAll('#list .drop-ring').forEach(x => x.remove());
     $('list').classList.remove('drop-target');
   },
   label(el, drop) {
