@@ -58,6 +58,27 @@
   .sync span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sync button { padding: 3px 9px; font-size: 12px; flex-shrink: 0; }
 
+  /* 폴더 */
+  #list .folder-head { display: flex; align-items: center; gap: 6px; font-weight: 600; padding: 7px 8px; }
+  #list .folder-head .arrow { width: 12px; color: var(--muted); font-size: 11px; flex-shrink: 0; }
+  #list .folder-head .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #list .folder-head .count { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .f-actions { display: flex; gap: 2px; opacity: 0; flex-shrink: 0; }
+  #list .folder-head:hover .f-actions, #list .folder-head.arming .f-actions { opacity: 1; }
+  @media (hover: none) { .f-actions { opacity: 1; } }
+  .f-actions button { padding: 1px 6px; font-size: 12px; border-color: transparent; background: transparent; }
+  .f-actions button:hover { border-color: var(--line); background: var(--panel); }
+  .f-actions button.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+  #list li.in-folder { padding-left: 30px; }
+  #list li.empty-folder { font-size: 12px; cursor: default; }
+  #list li.empty-folder:hover { background: none; }
+  #list li.new-folder { color: var(--muted); font-size: 13px; }
+  #list li.folder-edit { padding: 4px 6px; }
+  #list li.folder-edit:hover { background: none; }
+  .folder-input { width: 100%; padding: 5px 8px; border: 2px solid var(--accent); border-radius: 6px;
+    background: var(--panel); outline: none; }
+  #folderNew { width: 150px; }
+
   main { overflow-y: auto; padding: 24px 32px; min-width: 0; }
   .wrap { max-width: 760px; margin: 0 auto; }
   #empty { text-align: center; margin-top: 20vh; color: var(--muted); }
@@ -171,6 +192,8 @@
         <div class="toolbar">
           <button id="backBtn" class="mobile-only">← 목록</button>
           <select id="typeSel" title="메모 종류"></select>
+          <select id="folderSel" title="폴더"></select>
+          <input id="folderNew" class="folder-input" placeholder="새 폴더 이름" autocomplete="off" hidden>
           <div class="seg">
             <button id="editTab">✏️ 쓰기</button><button id="viewTab">👀 보기</button><button id="mapTab">🗺️ 마인드맵</button>
           </div>
@@ -223,8 +246,15 @@ const TYPES = {
 };
 const LINK_RE = /\[\[([^\[\]\n]+?)\]\]/g;    // [[메모 제목]] 을 찾는 규칙
 
+const FOLDER_KEY = 'memo-box-folders-v1';
+const COLLAPSED_KEY = 'memo-box-collapsed-v1';   // 접어 둔 폴더 (기기마다 따로 기억해요)
+
 const $ = id => document.getElementById(id);
 let notes = loadNotes();
+let folders = loadFolders();   // 폴더: { id, type, name, created, updated } — 폴더는 메모 종류마다 따로 있어요
+let collapsed = loadCollapsed();
+let folderEdit = null;         // 폴더 이름을 적는 중이면 { kind: 'new', type } 또는 { kind: 'rename', id }
+let folderArm = null;          // "지울까요?" 확인 중인 폴더 번호
 let currentId = null;
 let filter = 'all';
 let mode = 'edit';
@@ -240,6 +270,15 @@ function loadNotes() {
   } catch (e) { /* 창고를 못 열면 예시 메모로 시작 */ }
   return sampleNotes();
 }
+function loadFolders() {
+  try { return JSON.parse(localStorage.getItem(FOLDER_KEY)) || []; } catch { return []; }
+}
+function loadCollapsed() {
+  try { return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY)) || []); } catch { return new Set(); }
+}
+function saveCollapsed() {
+  try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed])); } catch { /* 괜찮아요 */ }
+}
 
 let saveTimer = null;
 function saveSoon() {
@@ -251,6 +290,7 @@ function saveNow() {
   clearTimeout(saveTimer);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    localStorage.setItem(FOLDER_KEY, JSON.stringify(folders));
     $('saveState').textContent = '저장됨 ✓';
   } catch (e) {
     $('saveState').textContent = '⚠️ 저장 실패 — 내보내기로 백업하세요';
@@ -307,11 +347,27 @@ function backlinksOf(note) {
   return notes.filter(n => n.id !== note.id && linksIn(n).some(t => sameTitle(t, note.title)));
 }
 
-function createNote(title = '', type = 'fleeting') {
-  const note = { id: makeId(), type, title, content: '', created: Date.now(), updated: Date.now() };
+function createNote(title = '', type = 'fleeting', folder = '') {
+  const note = { id: makeId(), type, title, content: '', folder, created: Date.now(), updated: Date.now() };
   notes.push(note);
   saveNow();
   return note;
+}
+
+// ----- 폴더 도우미 -----
+const getFolder = id => folders.find(f => f.id === id);
+// 메모가 들어 있는 폴더. 폴더가 지워졌거나 메모 종류가 바뀌어서 안 맞으면 "폴더 없음"으로 봐요
+const folderOf = note => folders.find(f => f.id === note.folder && f.type === note.type) || null;
+const foldersOf = type => folders.filter(f => f.type === type).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+const folderNameTaken = (type, name, exceptId) =>
+  folders.some(f => f.type === type && f.id !== exceptId && f.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+function createFolder(name, type) {
+  const folder = { id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type, name,
+    created: Date.now(), updated: Date.now() };
+  folders.push(folder);
+  saveNow();
+  return folder;
 }
 
 // =====================================================
@@ -324,6 +380,21 @@ function renderFilters() {
     `<button data-type="${k}" class="${filter === k ? 'active' : ''}">${label} ${count(k)}</button>`).join('');
 }
 
+// 목록의 메모 한 줄. 폴더별로 묶지 않을 때(전체·검색)는 미리보기 앞에 폴더 이름을 붙여요
+function noteItem(n, q, inFolder) {
+  let snippet = n.content.split('\n').find(l => l.trim()) || '';
+  if (q) {   // 검색 중이면 찾은 단어 주변 글을 보여 주기
+    const i = n.content.toLowerCase().indexOf(q);
+    if (i >= 0) snippet = '…' + n.content.slice(Math.max(0, i - 15), i + 40).replace(/\n/g, ' ');
+  }
+  const f = folderOf(n);
+  if (f && !inFolder) snippet = `📁 ${f.name} · ${snippet}`;
+  return `<li data-id="${n.id}" class="${n.id === currentId ? 'active' : ''}${inFolder ? ' in-folder' : ''}">
+    <div class="t">${TYPES[n.type].icon} ${esc(n.title) || '<span class="muted">(제목 없음)</span>'}</div>
+    <div class="s">${esc(snippet)}</div></li>`;
+}
+
+let renderingList = false;   // 목록을 다시 그리는 중에는 입력칸이 사라져도 "다 적었다"로 보지 않아요
 function renderList() {
   renderFilters();
   const q = $('search').value.trim().toLowerCase();
@@ -332,20 +403,120 @@ function renderList() {
     .filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q))
     .sort((a, b) => b.updated - a.updated);
 
-  if (!shown.length) {
-    $('list').innerHTML = `<li class="muted" style="cursor:default">${q ? '찾는 메모가 없어요' : '메모가 없어요'}</li>`;
-    return;
+  let html;
+  if (filter !== 'all' && !q) html = folderTreeHtml(shown);   // 종류를 고르면 폴더별로 묶어서 보여 줘요
+  else if (!shown.length) html = `<li class="muted" style="cursor:default">${q ? '찾는 메모가 없어요' : '메모가 없어요'}</li>`;
+  else html = shown.map(n => noteItem(n, q, false)).join('');
+
+  renderingList = true;
+  $('list').innerHTML = html;
+  renderingList = false;
+  const input = $('folderInput');
+  if (input) {
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.addEventListener('input', () => { folderEdit.value = input.value; });
+    input.addEventListener('keydown', e => {
+      if (e.isComposing || e.keyCode === 229) return;   // 한글을 조합하는 중에는 무시
+      if (e.key === 'Enter') { e.preventDefault(); finishFolderEdit(input.value); }
+      else if (e.key === 'Escape') { e.preventDefault(); finishFolderEdit(''); }
+    });
+    input.addEventListener('blur', () => { if (!renderingList) finishFolderEdit(input.value); });
   }
-  $('list').innerHTML = shown.map(n => {
-    let snippet = n.content.split('\n').find(l => l.trim()) || '';
-    if (q) {   // 검색 중이면 찾은 단어 주변 글을 보여 주기
-      const i = n.content.toLowerCase().indexOf(q);
-      if (i >= 0) snippet = '…' + n.content.slice(Math.max(0, i - 15), i + 40).replace(/\n/g, ' ');
+}
+
+function folderTreeHtml(shown) {
+  const inputRow = `<li class="folder-edit"><input id="folderInput" class="folder-input" placeholder="폴더 이름 적고 Enter"
+    value="${esc(folderEdit?.value || '')}" autocomplete="off"></li>`;
+  let html = '';
+  for (const f of foldersOf(filter)) {
+    if (folderEdit?.kind === 'rename' && folderEdit.id === f.id) { html += inputRow; continue; }
+    const inside = shown.filter(n => n.folder === f.id);
+    const open = !collapsed.has(f.id), arming = folderArm === f.id;
+    html += `<li class="folder-head${arming ? ' arming' : ''}" data-folder="${f.id}">
+      <span class="arrow">${open ? '▾' : '▸'}</span>
+      <span class="fname">📁 ${esc(f.name)}</span><span class="count">${inside.length}</span>
+      <span class="f-actions">
+        <button data-fact="add" title="이 폴더에 새 메모">＋</button>
+        <button data-fact="rename" title="폴더 이름 바꾸기">✏️</button>
+        <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (메모는 지워지지 않아요)">${arming ? '지울까요?' : '🗑'}</button>
+      </span></li>`;
+    if (open) html += inside.map(n => noteItem(n, '', true)).join('') || '<li class="in-folder empty-folder muted">비어 있어요</li>';
+  }
+  html += shown.filter(n => !folderOf(n)).map(n => noteItem(n, '', false)).join('');   // 폴더에 안 넣은 메모
+  html += folderEdit?.kind === 'new' ? inputRow : '<li class="new-folder">＋ 새 폴더</li>';
+  return html;
+}
+
+// 폴더 이름 적기를 마쳤을 때 (새로 만들기 / 이름 바꾸기)
+function finishFolderEdit(value) {
+  const edit = folderEdit;
+  if (!edit) return;
+  folderEdit = null;
+  const name = value.trim();
+  if (name) {
+    const type = edit.kind === 'new' ? edit.type : getFolder(edit.id)?.type;
+    if (folderNameTaken(type, name, edit.id)) toast('같은 이름의 폴더가 이미 있어요');
+    else if (edit.kind === 'new') createFolder(name, type);
+    else {
+      const f = getFolder(edit.id);
+      if (f && f.name !== name) { f.name = name; f.updated = Date.now(); saveNow(); }
     }
-    return `<li data-id="${n.id}" class="${n.id === currentId ? 'active' : ''}">
-      <div class="t">${TYPES[n.type].icon} ${esc(n.title) || '<span class="muted">(제목 없음)</span>'}</div>
-      <div class="s">${esc(snippet)}</div></li>`;
-  }).join('');
+  }
+  renderList();
+  if (currentId) renderFolderSel();
+}
+
+let folderArmTimer = null;
+function folderAction(act, id) {
+  const f = getFolder(id);
+  if (!f) return;
+  if (act === 'add') {
+    collapsed.delete(id);
+    saveCollapsed();
+    const note = createNote('', f.type, f.id);
+    openNote(note.id, 'edit');
+    $('title').focus();
+  } else if (act === 'rename') {
+    folderEdit = { kind: 'rename', id, value: f.name };
+    renderList();
+  } else if (act === 'delete') {
+    if (folderArm !== id) {   // 첫 번째 누름: "지울까요?"로 바꾸기
+      folderArm = id;
+      clearTimeout(folderArmTimer);
+      folderArmTimer = setTimeout(() => { folderArm = null; renderList(); }, 3000);
+      return renderList();
+    }
+    folderArm = null;
+    clearTimeout(folderArmTimer);
+    // 폴더만 지우고, 안에 있던 메모는 "폴더 없음"으로 꺼내요
+    const moved = notes.filter(n => n.folder === id);
+    for (const n of moved) { n.folder = ''; n.updated = Date.now(); }
+    folders = folders.filter(x => x.id !== id);
+    saveNow();
+    renderList();
+    if (currentId) renderFolderSel();
+    toast(`"${f.name}" 폴더를 지웠어요 (메모 ${moved.length}개는 밖으로 꺼냈어요)`, '되돌리기', () => {
+      f.updated = Date.now();
+      folders.push(f);
+      for (const n of moved) { n.folder = id; n.updated = Date.now(); }
+      saveNow();
+      renderList();
+      if (currentId) renderFolderSel();
+    });
+  }
+}
+
+// 메모 화면 위쪽의 폴더 고르기 상자
+function renderFolderSel() {
+  const note = getNote(currentId);
+  if (!note) return;
+  $('folderSel').innerHTML = '<option value="">📄 폴더 없음</option>' +
+    foldersOf(note.type).map(f => `<option value="${f.id}">📁 ${esc(f.name)}</option>`).join('') +
+    '<option value="__new">＋ 새 폴더 만들기…</option>';
+  $('folderSel').value = folderOf(note)?.id || '';
+  $('folderSel').hidden = false;
+  $('folderNew').hidden = true;
 }
 
 // =====================================================
@@ -363,6 +534,7 @@ function openNote(id, startMode) {
   $('title').value = note.title;
   $('content').value = note.content;
   $('typeSel').value = note.type;
+  renderFolderSel();
   $('saveState').textContent = '';
   setMode(startMode || (mode === 'map' ? 'map' : note.content.trim() ? 'view' : 'edit'));
   renderMeta();
@@ -803,8 +975,45 @@ $('typeSel').innerHTML = Object.entries(TYPES).map(([k, v]) => `<option value="$
 $('typeSel').addEventListener('change', () => {
   const note = getNote(currentId);
   note.type = $('typeSel').value;
+  if (note.folder && !folderOf(note)) note.folder = '';   // 폴더는 종류마다 따로라서, 종류를 바꾸면 폴더에서 꺼내요
+  touch(note);
+  renderFolderSel();
+});
+
+$('folderSel').addEventListener('change', () => {
+  const note = getNote(currentId);
+  if ($('folderSel').value === '__new') {   // 새 폴더 이름을 적는 칸으로 바꾸기
+    $('folderSel').hidden = true;
+    $('folderNew').hidden = false;
+    $('folderNew').value = '';
+    $('folderNew').focus();
+    return;
+  }
+  note.folder = $('folderSel').value;
   touch(note);
 });
+let folderNewDone = false;
+function finishFolderNew(value) {
+  if (folderNewDone) return;
+  folderNewDone = true;
+  const note = getNote(currentId), name = value.trim();
+  if (note && name) {
+    if (folderNameTaken(note.type, name)) toast('같은 이름의 폴더가 이미 있어요');
+    else {
+      note.folder = createFolder(name, note.type).id;
+      touch(note);
+      toast(`"${name}" 폴더를 만들고 이 메모를 넣었어요`);
+    }
+  }
+  renderFolderSel();
+}
+$('folderNew').addEventListener('focus', () => { folderNewDone = false; });
+$('folderNew').addEventListener('keydown', e => {
+  if (e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Enter') { e.preventDefault(); finishFolderNew($('folderNew').value); }
+  else if (e.key === 'Escape') { e.preventDefault(); finishFolderNew(''); }
+});
+$('folderNew').addEventListener('blur', () => finishFolderNew($('folderNew').value));
 
 $('editTab').addEventListener('click', () => { setMode('edit'); $('content').focus(); });
 $('viewTab').addEventListener('click', () => { saveNow(); setMode('view'); renderBacklinks(); });
@@ -824,12 +1033,22 @@ $('backlinks').addEventListener('click', e => {
   if (li) openNote(li.dataset.id);
 });
 $('list').addEventListener('click', e => {
+  const head = e.target.closest('.folder-head');
+  const act = e.target.closest('[data-fact]');
+  if (act) return folderAction(act.dataset.fact, head.dataset.folder);
+  if (head) {   // 폴더 이름을 누르면 접었다 펼치기
+    const id = head.dataset.folder;
+    collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id);
+    saveCollapsed();
+    return renderList();
+  }
+  if (e.target.closest('.new-folder')) { folderEdit = { kind: 'new', type: filter, value: '' }; return renderList(); }
   const li = e.target.closest('li[data-id]');
   if (li) openNote(li.dataset.id);
 });
 $('filters').addEventListener('click', e => {
   const b = e.target.closest('button');
-  if (b) { filter = b.dataset.type; renderList(); }
+  if (b) { filter = b.dataset.type; folderEdit = null; folderArm = null; renderList(); }
 });
 $('search').addEventListener('input', renderList);
 
@@ -876,7 +1095,7 @@ $('deleteBtn').addEventListener('click', () => {
 // =====================================================
 $('exportBtn').addEventListener('click', () => {
   saveNow();
-  const blob = new Blob([JSON.stringify(notes, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ version: 2, notes, folders }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `메모상자-백업-${makeId().slice(0, 8)}.json`;
@@ -890,15 +1109,22 @@ $('importInput').addEventListener('change', async e => {
   e.target.value = '';
   if (!file) return;
   try {
-    const incoming = JSON.parse(await file.text());
+    const data = JSON.parse(await file.text());
+    // 예전 백업은 메모 목록만, 새 백업은 { notes, folders } 모양이에요
+    const incoming = Array.isArray(data) ? data : data?.notes;
+    const incomingFolders = Array.isArray(data?.folders) ? data.folders : [];
     if (!Array.isArray(incoming) || !incoming.every(n => n.id && 'content' in n)) throw new Error();
     let added = 0, replaced = 0;
     for (const n of incoming) {
-      const clean = { id: String(n.id), type: n.type in TYPES ? n.type : 'fleeting', title: String(n.title || ''),
-        content: String(n.content), created: Number(n.created) || Date.now(), updated: Number(n.updated) || Date.now() };
+      const clean = cleanNote({ ...n, created: n.created || Date.now(), updated: n.updated || Date.now() });
       const mine = getNote(clean.id);
       if (!mine) { notes.push(clean); added++; }
       else if (clean.updated > mine.updated) { Object.assign(mine, clean); replaced++; }   // 더 최근 것을 남겨요
+    }
+    for (const f of incomingFolders) {
+      const clean = cleanFolder(f), mine = getFolder(clean.id);
+      if (!mine) folders.push(clean);
+      else if (clean.updated > mine.updated) Object.assign(mine, clean);
     }
     saveNow();
     renderList();
@@ -931,14 +1157,25 @@ function toast(msg, actionLabel, onAction) {
 //  여기서는 "무엇이 바뀌었는지" 비교하고, 받은 메모를 합치는 규칙만 정해요.
 // =====================================================
 const sync = {
-  push: null,          // (번호, 메모) → 인터넷 창고에 올리기. 로그인하면 채워져요
-  ready: false,        // 인터넷 창고에서 처음 메모를 받아 온 뒤에만 올려요 (오래된 메모로 덮어쓰지 않게)
+  push: null,          // (종류, 번호, 내용) → 인터넷 창고에 올리기. 로그인하면 채워져요
+  // 인터넷 창고에서 처음 받아 온 뒤에만 올려요 (오래된 것으로 덮어쓰지 않게). 메모와 폴더를 따로 확인해요
+  ready: { notes: false, folders: false },
+  errors: {},          // 메모/폴더 쪽에서 난 오류
   key: null,           // 아래 "마지막으로 맞춘 모습"을 저장할 이름표 (계정마다 달라요)
-  synced: new Map(),   // 마지막으로 맞춘 모습: 번호 → 메모를 글자로 바꾼 것 (지운 메모는 'deleted')
+  // 마지막으로 맞춘 모습: 번호 → 글자로 바꾼 내용 (지운 것은 'deleted'). 폴더는 번호 앞에 'folder:'를 붙여요
+  synced: new Map(),
   login: null, logout: null,
 };
 const cleanNote = d => ({ id: String(d.id), type: d.type in TYPES ? d.type : 'fleeting', title: String(d.title || ''),
-  content: String(d.content || ''), created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
+  content: String(d.content || ''), folder: String(d.folder || ''), created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
+const cleanFolder = d => ({ id: String(d.id), type: d.type in TYPES ? d.type : 'fleeting', name: String(d.name || ''),
+  created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
+// 메모와 폴더를 같은 규칙으로 다루기 위한 설명서
+const KINDS = {
+  notes:   { prefix: '',        clean: cleanNote,   get: () => notes,   set: v => { notes = v; } },
+  folders: { prefix: 'folder:', clean: cleanFolder, get: () => folders, set: v => { folders = v; } },
+};
+const kindOfKey = key => key.startsWith('folder:') ? 'folders' : 'notes';
 
 function loadSynced() {
   try { return new Map(JSON.parse(localStorage.getItem(sync.key)) || []); } catch { return new Map(); }
@@ -947,53 +1184,63 @@ function saveSynced() {
   try { if (sync.key) localStorage.setItem(sync.key, JSON.stringify([...sync.synced])); } catch { /* 다음에 다시 저장돼요 */ }
 }
 
-// 내 쪽에서 바뀐 메모만 골라서 올리기
+// 내 쪽에서 바뀐 메모·폴더만 골라서 올리기
 function pushChanges() {
-  if (!sync.push || !sync.ready) return;
-  const mine = new Set();
-  for (const n of notes) {
-    mine.add(n.id);
-    const s = JSON.stringify(cleanNote(n));
-    if (sync.synced.get(n.id) !== s) { sync.synced.set(n.id, s); sync.push(n.id, { ...cleanNote(n), deleted: false }); }
-  }
-  // 내 쪽에서 지운 메모는 "지웠어요" 표시를 올려요 (다른 기기에서도 지워지게)
-  for (const [id, s] of sync.synced) {
-    if (!mine.has(id) && s !== 'deleted') { sync.synced.set(id, 'deleted'); sync.push(id, { id, deleted: true, updated: Date.now() }); }
-  }
+  if (!sync.push) return;
+  for (const kind of ['notes', 'folders']) if (sync.ready[kind]) pushKind(kind);
   saveSynced();
 }
+function pushKind(kind) {
+  const K = KINDS[kind], mine = new Set();
+  for (const item of K.get()) {
+    const key = K.prefix + item.id, s = JSON.stringify(K.clean(item));
+    mine.add(key);
+    if (sync.synced.get(key) !== s) { sync.synced.set(key, s); sync.push(kind, item.id, { ...K.clean(item), deleted: false }); }
+  }
+  // 내 쪽에서 지운 것은 "지웠어요" 표시를 올려요 (다른 기기에서도 지워지게)
+  for (const [key, s] of sync.synced) {
+    if (s === 'deleted' || mine.has(key) || kindOfKey(key) !== kind) continue;
+    const id = key.slice(K.prefix.length);
+    sync.synced.set(key, 'deleted');
+    sync.push(kind, id, { id, deleted: true, updated: Date.now() });
+  }
+}
 
-// 다른 기기에서 바뀐 메모 받아서 합치기. 같은 메모를 양쪽에서 고쳤으면 더 최근에 고친 쪽이 남아요
-function applyRemote(changes) {
+// 다른 기기에서 바뀐 메모·폴더 받아서 합치기. 같은 것을 양쪽에서 고쳤으면 더 최근에 고친 쪽이 남아요
+function applyRemote(changes, kind = 'notes') {
+  const K = KINDS[kind];
   let touched = false, currentChanged = false;
   for (const { id, data } of changes) {
-    const s = data && !data.deleted ? JSON.stringify(cleanNote(data)) : 'deleted';
-    if (sync.synced.get(id) === s) continue;   // 이미 알고 있는 모습이에요
-    sync.synced.set(id, s);
-    const mine = getNote(id);
+    const key = K.prefix + id;
+    const s = data && !data.deleted ? JSON.stringify(K.clean(data)) : 'deleted';
+    if (sync.synced.get(key) === s) continue;   // 이미 알고 있는 모습이에요
+    sync.synced.set(key, s);
+    const mine = K.get().find(x => x.id === id);
     if (s === 'deleted') {
       if (mine && (!data || (data.updated || 0) >= mine.updated)) {
-        notes = notes.filter(n => n.id !== id);
+        K.set(K.get().filter(x => x.id !== id));
         touched = true;
-        if (id === currentId) currentChanged = true;
+        if (kind === 'notes' && id === currentId) currentChanged = true;
       }
     } else {
-      const remote = cleanNote(data);
-      if (!mine) { notes.push(remote); touched = true; }
+      const remote = K.clean(data);
+      if (!mine) { K.get().push(remote); touched = true; }
       else if (remote.updated >= mine.updated) {
         Object.assign(mine, remote);
         touched = true;
-        if (id === currentId) currentChanged = true;
+        if (kind === 'notes' && id === currentId) currentChanged = true;
       }
       // 내 것이 더 최신이면 그대로 두고, 곧 다시 올라가요
     }
   }
   saveSynced();
-  if (!touched) return pushChanges();   // 내 쪽이 더 최신인 메모가 있으면 바로 올려요
+  if (!touched) return pushChanges();   // 내 쪽이 더 최신인 것이 있으면 바로 올려요
   saveNow();
   renderList();
   if (!currentId) return;
   if (!getNote(currentId)) return closeNote();
+  if (!$('folderNew').hidden) return;   // 새 폴더 이름을 적는 중이면 건드리지 않아요
+  renderFolderSel();
   const typing = ['title', 'content'].includes(document.activeElement?.id) || mapEdit;
   if (currentChanged && !typing) openNote(currentId, mode);
   else if (!typing) { renderBacklinks(); if (mode === 'map') renderMap(); else if (mode === 'view') setMode('view'); }
@@ -1064,7 +1311,12 @@ if (!FIREBASE_CONFIG.apiKey) {
       if (e.code === 'auth/operation-not-allowed') return 'Firebase에서 Google 로그인을 켜 주세요';
       return e.message || String(e);
     };
-    let stopListening = null;
+    let stopListening = [];
+    // 오류가 남아 있으면 "동기화됨" 대신 오류를 계속 보여 줘요
+    const showStatus = (state, email) => {
+      const err = Object.values(sync.errors).find(Boolean);
+      err ? setSyncStatus('error', err) : setSyncStatus(state, email);
+    };
 
     sync.login = async () => {
       const provider = new A.GoogleAuthProvider();
@@ -1077,28 +1329,40 @@ if (!FIREBASE_CONFIG.apiKey) {
     sync.logout = () => A.signOut(auth);
 
     A.onAuthStateChanged(auth, user => {
-      stopListening?.();
-      stopListening = null;
+      stopListening.forEach(stop => stop());
+      stopListening = [];
       sync.push = null;
-      sync.ready = false;
+      sync.ready = { notes: false, folders: false };
+      sync.errors = {};
       if (!user) { sync.key = null; sync.synced = new Map(); return setSyncStatus('signedOut'); }
 
       sync.key = 'memo-box-synced-v1:' + user.uid;
       sync.synced = loadSynced();
       setSyncStatus('connecting');
-      // 메모는 users / 내 번호 / notes / 메모 번호 에 한 장씩 저장돼요
-      const col = F.collection(db, 'users', user.uid, 'notes');
-      sync.push = (id, data) => F.setDoc(F.doc(col, id), data).catch(e => setSyncStatus('error', explain(e)));
+      // 메모는 users / 내 번호 / notes / 메모 번호, 폴더는 users / 내 번호 / folders / 폴더 번호 에 저장돼요
+      const cols = {
+        notes: F.collection(db, 'users', user.uid, 'notes'),
+        folders: F.collection(db, 'users', user.uid, 'folders'),
+      };
+      const label = { notes: '', folders: ' (폴더)' };
+      sync.push = (kind, id, data) => F.setDoc(F.doc(cols[kind], id), data).catch(e => {
+        sync.errors[kind] = explain(e) + label[kind];
+        showStatus('error');
+      });
 
-      stopListening = F.onSnapshot(col, { includeMetadataChanges: true }, snap => {
-        if (snap.metadata.fromCache) return setSyncStatus('offline');
-        const changes = snap.docChanges()
-          .filter(c => !c.doc.metadata.hasPendingWrites)
-          .map(c => ({ id: c.doc.id, data: c.type === 'removed' ? null : c.doc.data() }));
-        applyRemote(changes);
-        if (!sync.ready) { sync.ready = true; pushChanges(); }   // 처음 받아 온 뒤, 내 쪽에만 있는 메모 올리기
-        setSyncStatus(snap.metadata.hasPendingWrites ? 'pending' : 'synced', user.email);
-      }, e => setSyncStatus('error', explain(e)));
+      // 메모와 폴더를 따로 지켜봐요. 한쪽에 문제가 생겨도 다른 쪽은 계속 맞춰져요
+      for (const kind of ['notes', 'folders']) {
+        stopListening.push(F.onSnapshot(cols[kind], { includeMetadataChanges: true }, snap => {
+          if (snap.metadata.fromCache) return setSyncStatus('offline');
+          const changes = snap.docChanges()
+            .filter(c => !c.doc.metadata.hasPendingWrites)
+            .map(c => ({ id: c.doc.id, data: c.type === 'removed' ? null : c.doc.data() }));
+          applyRemote(changes, kind);
+          sync.errors[kind] = null;
+          if (!sync.ready[kind]) { sync.ready[kind] = true; pushChanges(); }   // 처음 받아 온 뒤, 내 쪽에만 있는 것 올리기
+          showStatus(snap.metadata.hasPendingWrites ? 'pending' : 'synced', user.email);
+        }, e => { sync.errors[kind] = explain(e) + label[kind]; showStatus('error'); }));
+      }
     });
   } catch (e) {
     setSyncStatus('error', '동기화 연결 실패 · 이 기기에만 저장돼요');
