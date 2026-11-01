@@ -111,7 +111,7 @@
   /* ----- 목록 ----- */
   #list { list-style: none; margin: 0 -6px; padding: 4px 6px 10px; overflow-y: auto; flex: 1; min-height: 0; }
   /* 폴더: 탭이 달린 작은 종이 폴더 */
-  .folder-head { position: relative; margin: 16px 0 8px; padding: 9px 10px 9px 12px; border-radius: 0 6px 6px 6px;
+  .folder-head { position: relative; margin: 16px 0 8px; padding: 8px 10px 10px 12px; border-radius: 0 6px 6px 6px;
     background-image: var(--grain); box-shadow: var(--shadow); color: #2A2621; display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .folder-head::before { content: ''; position: absolute; left: 0; top: -9px; width: 64px; height: 10px; background: inherit;
     clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%); border-radius: 5px 0 0 0; }
@@ -121,11 +121,15 @@
   .folder-head .count { font-family: var(--en); font-size: 11px; opacity: .7; }
   .swatch { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(42, 38, 33, .45); background: inherit;
     padding: 0; flex-shrink: 0; }
-  /* 폴더 버튼은 마우스를 올렸을 때만 나와서 자리를 차지해요 */
-  .f-actions { display: none; gap: 2px; flex-shrink: 0; }
+  /* 폴더 버튼: 마우스를 올리면 폴더 이름 위에 겹쳐서 나와요.
+     자리를 차지하지 않으니 색 동그라미와 개수가 옆으로 밀려나지 않아요 */
+  .f-actions { display: none; gap: 2px; position: absolute; top: 0; bottom: 0; right: 52px; align-items: center;
+    max-width: calc(100% - 56px); justify-content: flex-end; overflow: hidden;   /* 깊은 폴더에서도 폴더 밖으로 안 나가게 */
+    padding-left: 8px; background: inherit; border-radius: 4px; }
   .folder-head:hover .f-actions, .folder-head.arming .f-actions { display: flex; }
-  @media (hover: none) { .f-actions { display: flex; } }
-  .f-actions button { font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: .05em; padding: 2px 5px;
+  /* 터치 화면(마우스 없음)에서는 늘 보이게, 대신 이름 뒤 제자리에 */
+  @media (hover: none) { .f-actions { display: flex; position: static; padding-left: 0; background: none; } }
+  .f-actions button { white-space: nowrap; font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: .03em; padding: 2px 4px;
     border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; }
   .f-actions button:hover { border-color: rgba(42, 38, 33, .3); background: rgba(255, 255, 255, .5); }
   .f-actions button.armed { background: var(--clay-text); border-color: var(--clay-text); color: #fff; }
@@ -216,18 +220,19 @@
   .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; line-height: 1; position: relative; }
   .pill select, .pill input { appearance: none; -webkit-appearance: none; border: none; outline: none; background: transparent; cursor: pointer; }
   .type-pill { padding: 0; }
-  .type-pill select { padding: 5px 12px; border-radius: 999px; font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; }
+  /* 글자가 위아래 가운데에 오도록 잰 값만큼 위·아래 여백을 다르게 줘요 */
+  .type-pill select { padding: 7px 12px 6px; border-radius: 999px; font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; }
   /* 종류 알약 색 (위의 "투명 배경" 규칙보다 우선하도록 한 단계 더 자세히) */
   .type-pill select.t-fleeting { background-color: var(--fleeting); color: var(--fleeting-ink); }
   .type-pill select.t-literature { background-color: var(--literature); color: var(--literature-ink); }
   .type-pill select.t-index { background-color: var(--index); color: var(--index-ink); }
   .type-pill select.t-permanent { background-color: var(--permanent); color: var(--permanent-ink); }
   .type-pill select option { background: var(--paper); color: var(--ink); }
-  .folder-pill { padding: 0 4px 0 10px; border: 1px solid var(--edge); }
+  .folder-pill { height: 24px; padding: 0 10px; border: 1px solid var(--edge); }   /* 좌우 여백 같게 */
   .folder-pill .sw { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-  .folder-pill select, .folder-pill input { padding: 5px 8px 5px 0; font-family: var(--title); font-weight: 400; font-size: 12px;
+  .folder-pill select, .folder-pill input { padding: 4px 0 6px 0; font-family: var(--title); font-weight: 400; font-size: 12px;
     letter-spacing: var(--title-spacing); color: var(--ink); }
-  .folder-pill select.none { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); }
+  .folder-pill select.none { padding-top: 6px; padding-bottom: 4px; font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; color: var(--ink-soft); }
   .folder-pill input { width: 140px; cursor: text; }
   .double { border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); height: 4px; margin: 18px 0 8px; }
 
@@ -728,8 +733,8 @@ function folderTreeHtml(shown) {
         <span class="arrow">${open ? '▼' : '▶'}</span>
         <span class="fname">${esc(f.name)}</span>
         <span class="f-actions">
-          <button data-fact="add" title="이 폴더에 새 메모">+ NOTE</button>
-          <button data-fact="subfolder" title="이 폴더 안에 폴더 만들기">+ SUB</button>
+          <button data-fact="add" title="이 폴더에 새 메모">+NOTE</button>
+          <button data-fact="subfolder" title="이 폴더 안에 폴더 만들기">+SUB</button>
           <button data-fact="rename" title="폴더 이름 바꾸기">EDIT</button>
           <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (안에 있던 것은 한 층 위로 꺼내요)">${arming ? 'SURE?' : 'DEL'}</button>
         </span>
@@ -846,18 +851,33 @@ function renderFolderSel() {
   if (!note) return;
   $('typeSel').value = note.type;
   $('typeSel').className = `t-${note.type}`;
-  $('folderSel').innerHTML = '<option value="">No folder</option>' +
-    folderTree(note.type).map(({ f, depth }) =>   // 안쪽 폴더는 들여 써서 보여 줘요
-      `<option value="${f.id}">${'   '.repeat(depth)}${esc(f.name)}</option>`).join('') +
-    '<option value="__new">+ New folder…</option>';
   const f = folderOf(note);
+  $('folderSel').innerHTML = '<option value="">No folder</option>' +
+    folderTree(note.type).map(({ f: x, depth }) =>   // 안쪽 폴더는 들여 써서 보여 줘요 (고른 폴더는 알약에 그대로 보이니 들여 쓰지 않아요)
+      `<option value="${x.id}">${x.id === f?.id ? '' : '   '.repeat(depth)}${esc(x.name)}</option>`).join('') +
+    '<option value="__new">+ New folder…</option>';
   $('folderSel').value = f?.id || '';
   $('folderSel').classList.toggle('none', !f);
   $('folderSw').hidden = !f;
   if (f) $('folderSw').style.background = `var(--f-${colorOf(f)})`;
   $('folderSel').hidden = false;
   $('folderNew').hidden = true;
+  fitSelect($('typeSel'));
+  fitSelect($('folderSel'));
 }
+
+// 고르기 상자 폭을 지금 고른 글자에 딱 맞춰요.
+// (그대로 두면 가장 긴 항목 폭만큼 넓어져서 알약 오른쪽이 텅 비어요. 마지막 글자 뒤 자간은 빼서 좌우를 같게)
+const measureCtx = document.createElement('canvas').getContext('2d');
+function fitSelect(sel) {
+  const cs = getComputedStyle(sel), text = sel.selectedOptions[0]?.text || '';
+  measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const ls = parseFloat(cs.letterSpacing) || 0;
+  const w = measureCtx.measureText(text).width + ls * Math.max(0, text.length - 1) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  sel.style.width = Math.round(w) + 'px';
+}
+// 글꼴 파일이 늦게 도착하면 폭을 다시 맞춰요
+document.fonts?.addEventListener('loadingdone', () => { if (currentId) renderFolderSel(); });
 
 // =====================================================
 //  5. 메모 열기 / 오른쪽 화면 그리기
