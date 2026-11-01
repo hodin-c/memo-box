@@ -32,8 +32,9 @@
   .muted { color: var(--muted); font-size: 13px; }
 
   /* ===== 화면 배치: 왼쪽 목록 + 오른쪽 메모 ===== */
-  .app { display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
-  .sidebar { background: var(--panel); border-right: 1px solid var(--line);
+  /* minmax(0, …): 긴 글자가 있어도 칸이 화면보다 넓어지지 않게 해요 */
+  .app { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: 100vh; height: 100dvh; }
+  .sidebar { min-width: 0; background: var(--panel); border-right: 1px solid var(--line);
     display: flex; flex-direction: column; gap: 10px; padding: 16px; min-height: 0; }
   .brand { font-size: 18px; font-weight: 700; }
   #search { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
@@ -137,7 +138,7 @@
 
   /* ===== 핸드폰처럼 좁은 화면 ===== */
   @media (max-width: 760px) {
-    .app { grid-template-columns: 1fr; }
+    .app { grid-template-columns: minmax(0, 1fr); }
     main { display: none; padding: 16px; }
     .app.show-main .sidebar { display: none; }
     .app.show-main main { display: block; }
