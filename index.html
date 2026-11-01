@@ -63,10 +63,11 @@
   #list .folder-head .arrow { width: 12px; color: var(--muted); font-size: 11px; flex-shrink: 0; }
   #list .folder-head .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #list .folder-head .count { color: var(--muted); font-size: 12px; font-weight: 400; }
-  .f-actions { display: flex; gap: 2px; opacity: 0; flex-shrink: 0; }
-  #list .folder-head:hover .f-actions, #list .folder-head.arming .f-actions { opacity: 1; }
-  @media (hover: none) { .f-actions { opacity: 1; } }
-  .f-actions button { padding: 1px 6px; font-size: 12px; border-color: transparent; background: transparent; }
+  /* 폴더 버튼은 마우스를 올렸을 때만 나와서 자리를 차지해요 (안 그러면 깊은 폴더 이름이 잘려요) */
+  .f-actions { display: none; gap: 1px; flex-shrink: 0; }
+  #list .folder-head:hover .f-actions, #list .folder-head.arming .f-actions { display: flex; }
+  @media (hover: none) { .f-actions { display: flex; } .f-actions button { padding: 1px 3px; } }
+  .f-actions button { padding: 1px 5px; font-size: 12px; border-color: transparent; background: transparent; }
   .f-actions button:hover { border-color: var(--line); background: var(--panel); }
   .f-actions button.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
   #list li.in-folder { padding-left: 30px; }
@@ -78,6 +79,20 @@
   .folder-input { width: 100%; padding: 5px 8px; border: 2px solid var(--accent); border-radius: 6px;
     background: var(--panel); outline: none; }
   #folderNew { width: 150px; }
+  #list li.drag-tip { font-size: 12px; cursor: default; padding-top: 2px; }
+  #list li.drag-tip:hover { background: none; }
+
+  /* 끌어서 옮기기 */
+  #list li[data-id], .mm-node { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .drag-ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 10px; border-radius: 8px;
+    background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,.2);
+    font-size: 13px; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.dragging, body.dragging * { cursor: grabbing !important; }
+  .drag-src { opacity: .4; }
+  #list .folder-head.drop-target { background: var(--accent-soft); outline: 2px solid var(--accent); outline-offset: -2px; }
+  #list.drop-target { outline: 2px dashed var(--accent); outline-offset: -2px; border-radius: 8px; }
+  .mm-node.drop-child rect { stroke: var(--accent); stroke-width: 3; fill: var(--accent-soft); }
+  .drop-bar { position: fixed; z-index: 49; height: 4px; background: var(--accent); border-radius: 2px; pointer-events: none; }
 
   main { overflow-y: auto; padding: 24px 32px; min-width: 0; }
   .wrap { max-width: 760px; margin: 0 auto; }
@@ -219,7 +234,8 @@
               <button data-act="open">📄 내용 보기</button>
             </div>
             <div id="mapCanvas" tabindex="0"></div>
-            <p class="muted map-help">클릭: 고르기 · 더블클릭: 그 메모 쓰기 화면으로 · 방향키: 옮겨 다니기 · 새 이름을 적다가 Tab을 누르면 바로 그 아래 메모를 또 만들어요</p>
+            <p class="muted map-help">클릭: 고르기 · 더블클릭: 그 메모 쓰기 화면으로 · 방향키: 옮겨 다니기 · 새 이름을 적다가 Tab을 누르면 바로 그 아래 메모를 또 만들어요<br>
+              🖐 카드를 끌어다 다른 카드에 놓기: <b>가운데</b> → 하위로 · <b>위/아래 끝</b> → 같은 단계로 · <b>Ctrl</b> 누른 채 → 예전 연결은 두고 연결만 추가 (핸드폰은 꾹 누른 뒤 끌기)</p>
           </div>
         </div>
         <p id="noteMeta" class="muted"></p>
@@ -232,6 +248,7 @@
   </main>
 </div>
 <div id="toast"></div>
+<div id="dropBar" class="drop-bar" hidden></div>
 
 <script>
 // =====================================================
@@ -358,12 +375,40 @@ function createNote(title = '', type = 'fleeting', folder = '') {
 const getFolder = id => folders.find(f => f.id === id);
 // 메모가 들어 있는 폴더. 폴더가 지워졌거나 메모 종류가 바뀌어서 안 맞으면 "폴더 없음"으로 봐요
 const folderOf = note => folders.find(f => f.id === note.folder && f.type === note.type) || null;
-const foldersOf = type => folders.filter(f => f.type === type).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-const folderNameTaken = (type, name, exceptId) =>
-  folders.some(f => f.type === type && f.id !== exceptId && f.name.trim().toLowerCase() === name.trim().toLowerCase());
+const byName = (a, b) => a.name.localeCompare(b.name, 'ko');
+const foldersOf = type => folders.filter(f => f.type === type);
 
-function createFolder(name, type) {
-  const folder = { id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type, name,
+// 폴더 안의 폴더: 각 폴더는 parent(바로 위 폴더 번호)를 가져요. ''이면 맨 위예요
+// 위 폴더가 없어졌거나, 종류가 다르거나, 빙빙 도는 고리가 생기면 맨 위에 있는 것으로 봐요
+function parentOf(f) {
+  const p = f.parent && getFolder(f.parent);
+  if (!p || p.type !== f.type) return null;
+  for (let q = p, i = 0; q && i < 100; q = q.parent && getFolder(q.parent), i++) if (q.id === f.id) return null;
+  return p;
+}
+const parentIdOf = f => parentOf(f)?.id || '';
+const childFoldersOf = (type, parentId) => foldersOf(type).filter(f => parentIdOf(f) === parentId).sort(byName);
+// id 폴더가 ancestorId 폴더 자신이거나 그 안(몇 층 아래든)에 있나요?
+function isFolderInside(id, ancestorId) {
+  for (let q = getFolder(id), i = 0; q && i < 100; q = parentOf(q), i++) if (q.id === ancestorId) return true;
+  return false;
+}
+// "식물 › 세포 › 엽록체" 처럼 맨 위부터 이어 붙인 이름
+function folderPath(f) {
+  const names = [];
+  for (let q = f, i = 0; q && i < 100; q = parentOf(q), i++) names.unshift(q.name);
+  return names.join(' › ');
+}
+// 위에서 아래로 차례대로 펼친 폴더 목록 [{ f, depth }]
+function folderTree(type, parentId = '', depth = 0) {
+  return childFoldersOf(type, parentId).flatMap(f => [{ f, depth }, ...folderTree(type, f.id, depth + 1)]);
+}
+// 같은 자리(같은 위 폴더) 안에서만 이름이 겹치면 안 돼요
+const folderNameTaken = (type, name, exceptId, parentId = '') =>
+  childFoldersOf(type, parentId).some(f => f.id !== exceptId && f.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+function createFolder(name, type, parent = '') {
+  const folder = { id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type, name, parent,
     created: Date.now(), updated: Date.now() };
   folders.push(folder);
   saveNow();
@@ -381,15 +426,17 @@ function renderFilters() {
 }
 
 // 목록의 메모 한 줄. 폴더별로 묶지 않을 때(전체·검색)는 미리보기 앞에 폴더 이름을 붙여요
-function noteItem(n, q, inFolder) {
+const indent = depth => `style="padding-left:${8 + depth * 16}px"`;   // 폴더 층마다 조금씩 들여 써요
+
+function noteItem(n, q, inFolder, depth = 1) {
   let snippet = n.content.split('\n').find(l => l.trim()) || '';
   if (q) {   // 검색 중이면 찾은 단어 주변 글을 보여 주기
     const i = n.content.toLowerCase().indexOf(q);
     if (i >= 0) snippet = '…' + n.content.slice(Math.max(0, i - 15), i + 40).replace(/\n/g, ' ');
   }
   const f = folderOf(n);
-  if (f && !inFolder) snippet = `📁 ${f.name} · ${snippet}`;
-  return `<li data-id="${n.id}" class="${n.id === currentId ? 'active' : ''}${inFolder ? ' in-folder' : ''}">
+  if (f && !inFolder) snippet = `📁 ${folderPath(f)} · ${snippet}`;
+  return `<li data-id="${n.id}" ${inFolder && f ? `data-folder="${f.id}" ${indent(depth + 0.6)}` : ''} class="${n.id === currentId ? 'active' : ''}${inFolder ? ' in-folder' : ''}">
     <div class="t">${TYPES[n.type].icon} ${esc(n.title) || '<span class="muted">(제목 없음)</span>'}</div>
     <div class="s">${esc(snippet)}</div></li>`;
 }
@@ -426,25 +473,38 @@ function renderList() {
 }
 
 function folderTreeHtml(shown) {
-  const inputRow = `<li class="folder-edit"><input id="folderInput" class="folder-input" placeholder="폴더 이름 적고 Enter"
-    value="${esc(folderEdit?.value || '')}" autocomplete="off"></li>`;
+  const inputRow = depth => `<li class="folder-edit" ${indent(depth)}><input id="folderInput" class="folder-input"
+    placeholder="폴더 이름 적고 Enter" value="${esc(folderEdit?.value || '')}" autocomplete="off"></li>`;
+  // 폴더 안(아래층 폴더 포함)에 있는 메모 수
+  const countIn = id => shown.filter(n => { const f = folderOf(n); return f && isFolderInside(f.id, id); }).length;
   let html = '';
-  for (const f of foldersOf(filter)) {
-    if (folderEdit?.kind === 'rename' && folderEdit.id === f.id) { html += inputRow; continue; }
-    const inside = shown.filter(n => n.folder === f.id);
-    const open = !collapsed.has(f.id), arming = folderArm === f.id;
-    html += `<li class="folder-head${arming ? ' arming' : ''}" data-folder="${f.id}">
-      <span class="arrow">${open ? '▾' : '▸'}</span>
-      <span class="fname">📁 ${esc(f.name)}</span><span class="count">${inside.length}</span>
-      <span class="f-actions">
-        <button data-fact="add" title="이 폴더에 새 메모">＋</button>
-        <button data-fact="rename" title="폴더 이름 바꾸기">✏️</button>
-        <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (메모는 지워지지 않아요)">${arming ? '지울까요?' : '🗑'}</button>
-      </span></li>`;
-    if (open) html += inside.map(n => noteItem(n, '', true)).join('') || '<li class="in-folder empty-folder muted">비어 있어요</li>';
-  }
+  (function walk(parentId, depth) {
+    for (const f of childFoldersOf(filter, parentId)) {
+      const open = !collapsed.has(f.id), arming = folderArm === f.id;
+      if (folderEdit?.kind === 'rename' && folderEdit.id === f.id) html += inputRow(depth);
+      else html += `<li class="folder-head${arming ? ' arming' : ''}" data-folder="${f.id}" ${indent(depth)}>
+        <span class="arrow">${open ? '▾' : '▸'}</span>
+        <span class="fname">📁 ${esc(f.name)}</span><span class="count">${countIn(f.id)}</span>
+        <span class="f-actions">
+          <button data-fact="add" title="이 폴더에 새 메모">＋</button>
+          <button data-fact="subfolder" title="이 폴더 안에 폴더 만들기">📁＋</button>
+          <button data-fact="rename" title="폴더 이름 바꾸기">✏️</button>
+          <button data-fact="delete" class="${arming ? 'armed' : ''}" title="폴더 지우기 (안에 있던 것은 한 층 위로 꺼내요)">${arming ? '지울까요?' : '🗑'}</button>
+        </span></li>`;
+      if (!open) continue;
+      const making = folderEdit?.kind === 'new' && folderEdit.parent === f.id;
+      if (making) html += inputRow(depth + 1);
+      walk(f.id, depth + 1);   // 안에 있는 폴더 먼저
+      const inside = shown.filter(n => folderOf(n)?.id === f.id);
+      html += inside.map(n => noteItem(n, '', true, depth)).join('');
+      if (!inside.length && !making && !childFoldersOf(filter, f.id).length) {
+        html += `<li class="in-folder empty-folder muted" data-folder="${f.id}" ${indent(depth + 1.6)}>비어 있어요</li>`;
+      }
+    }
+  })('', 0);
   html += shown.filter(n => !folderOf(n)).map(n => noteItem(n, '', false)).join('');   // 폴더에 안 넣은 메모
-  html += folderEdit?.kind === 'new' ? inputRow : '<li class="new-folder">＋ 새 폴더</li>';
+  html += folderEdit?.kind === 'new' && !folderEdit.parent ? inputRow(0) : '<li class="new-folder">＋ 새 폴더</li>';
+  if (foldersOf(filter).length) html += '<li class="drag-tip muted">💡 메모나 폴더를 끌어서 다른 폴더에 넣거나, 빈 곳에 놓아 맨 위로 꺼낼 수 있어요</li>';
   return html;
 }
 
@@ -455,9 +515,10 @@ function finishFolderEdit(value) {
   folderEdit = null;
   const name = value.trim();
   if (name) {
-    const type = edit.kind === 'new' ? edit.type : getFolder(edit.id)?.type;
-    if (folderNameTaken(type, name, edit.id)) toast('같은 이름의 폴더가 이미 있어요');
-    else if (edit.kind === 'new') createFolder(name, type);
+    const f0 = edit.kind === 'rename' ? getFolder(edit.id) : null;
+    const type = f0 ? f0.type : edit.type, parentId = f0 ? parentIdOf(f0) : (edit.parent || '');
+    if (folderNameTaken(type, name, edit.id, parentId)) toast('같은 자리에 같은 이름의 폴더가 이미 있어요');
+    else if (edit.kind === 'new') createFolder(name, type, parentId);
     else {
       const f = getFolder(edit.id);
       if (f && f.name !== name) { f.name = name; f.updated = Date.now(); saveNow(); }
@@ -477,6 +538,11 @@ function folderAction(act, id) {
     const note = createNote('', f.type, f.id);
     openNote(note.id, 'edit');
     $('title').focus();
+  } else if (act === 'subfolder') {
+    collapsed.delete(id);
+    saveCollapsed();
+    folderEdit = { kind: 'new', type: f.type, parent: id, value: '' };
+    renderList();
   } else if (act === 'rename') {
     folderEdit = { kind: 'rename', id, value: f.name };
     renderList();
@@ -489,17 +555,22 @@ function folderAction(act, id) {
     }
     folderArm = null;
     clearTimeout(folderArmTimer);
-    // 폴더만 지우고, 안에 있던 메모는 "폴더 없음"으로 꺼내요
+    // 폴더만 지우고, 안에 있던 메모와 폴더는 한 층 위(지운 폴더가 있던 자리)로 꺼내요
+    const up = parentIdOf(f);
     const moved = notes.filter(n => n.folder === id);
-    for (const n of moved) { n.folder = ''; n.updated = Date.now(); }
+    const movedFolders = folders.filter(x => x.parent === id);
+    for (const n of moved) { n.folder = up; n.updated = Date.now(); }
+    for (const x of movedFolders) { x.parent = up; x.updated = Date.now(); }
     folders = folders.filter(x => x.id !== id);
     saveNow();
     renderList();
     if (currentId) renderFolderSel();
-    toast(`"${f.name}" 폴더를 지웠어요 (메모 ${moved.length}개는 밖으로 꺼냈어요)`, '되돌리기', () => {
+    const what = [moved.length && `메모 ${moved.length}개`, movedFolders.length && `폴더 ${movedFolders.length}개`].filter(Boolean).join(', ');
+    toast(`"${f.name}" 폴더를 지웠어요${what ? ` (${what}는 한 층 위로 꺼냈어요)` : ''}`, '되돌리기', () => {
       f.updated = Date.now();
       folders.push(f);
       for (const n of moved) { n.folder = id; n.updated = Date.now(); }
+      for (const x of movedFolders) { x.parent = id; x.updated = Date.now(); }
       saveNow();
       renderList();
       if (currentId) renderFolderSel();
@@ -512,7 +583,8 @@ function renderFolderSel() {
   const note = getNote(currentId);
   if (!note) return;
   $('folderSel').innerHTML = '<option value="">📄 폴더 없음</option>' +
-    foldersOf(note.type).map(f => `<option value="${f.id}">📁 ${esc(f.name)}</option>`).join('') +
+    folderTree(note.type).map(({ f, depth }) =>   // 안쪽 폴더는 들여 써서 보여 줘요
+      `<option value="${f.id}">${'   '.repeat(depth)}📁 ${esc(f.name)}</option>`).join('') +
     '<option value="__new">＋ 새 폴더 만들기…</option>';
   $('folderSel').value = folderOf(note)?.id || '';
   $('folderSel').hidden = false;
@@ -599,9 +671,17 @@ function renderMap() {
     const next = [];
     for (const id of frontier) {
       const note = getNote(id);
-      for (const nb of neighborsOf(note)) if (!level.has(nb)) { addChild(id, nb, d); next.push(nb); }
-      // 아직 없는 메모로 가는 링크는 빨간 점선 상자로
-      for (const t of new Set(linksIn(note).filter(t => !findByTitle(t)))) addChild(id, `missing:${id}|${t}`, d);
+      // 내용에 적힌 [[링크]] 순서대로 가지를 만들어요 (끌어서 순서를 바꿀 수 있게)
+      const seenTitles = new Set();
+      for (const t of linksIn(note)) {
+        if (seenTitles.has(t.toLowerCase())) continue;
+        seenTitles.add(t.toLowerCase());
+        const n = findByTitle(t);
+        if (!n) addChild(id, `missing:${id}|${t}`, d);   // 아직 없는 메모로 가는 링크는 빨간 점선 상자로
+        else if (n.id !== id && !level.has(n.id)) { addChild(id, n.id, d); next.push(n.id); }
+      }
+      // 그다음, 이 메모를 가리키는 메모들
+      for (const n of backlinksOf(note)) if (!level.has(n.id)) { addChild(id, n.id, d); next.push(n.id); }
     }
     frontier = next;
   }
@@ -1152,6 +1232,249 @@ function toast(msg, actionLabel, onAction) {
 }
 
 // =====================================================
+//  끌어서 옮기기 (드래그)
+//  마우스: 누른 채 움직이기 · 손가락: 꾹 누른 뒤(약 0.5초) 움직이기 — 그냥 쓸면 평소처럼 스크롤돼요
+// =====================================================
+let justDragged = false;   // 끌기를 막 끝냈으면 그 뒤에 오는 "클릭"은 무시해요
+function enableDrag(container, opts) {
+  let pending = null, drag = null, timer = null;
+  const cancel = () => { clearTimeout(timer); pending = null; };
+
+  container.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || drag) return;
+    const el = e.target.closest(opts.item);
+    if (!el || !opts.canDrag(el)) return;
+    pending = { el, x: e.clientX, y: e.clientY, id: e.pointerId, touch: e.pointerType !== 'mouse' };
+    if (pending.touch) timer = setTimeout(start, 450);
+  });
+  window.addEventListener('pointermove', e => {
+    if (drag) { if (e.pointerId === drag.id) move(e); return; }
+    if (!pending || e.pointerId !== pending.id) return;
+    const dist = Math.hypot(e.clientX - pending.x, e.clientY - pending.y);
+    if (pending.touch) { if (dist > 10) cancel(); }   // 꾹 누르기 전에 움직이면 스크롤로 봐요
+    else if (dist > 6) { start(); move(e); }
+  });
+  window.addEventListener('pointerup', () => { if (drag) finish(true); cancel(); });
+  window.addEventListener('pointercancel', () => { if (drag) finish(false); cancel(); });
+  window.addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, { passive: false });   // 끄는 동안 화면이 안 밀리게
+  window.addEventListener('contextmenu', e => { if (drag || pending?.touch) e.preventDefault(); });
+  window.addEventListener('keydown', e => { if (drag && e.key === 'Escape') finish(false); });
+  container.addEventListener('click', e => {
+    if (justDragged) { e.stopPropagation(); e.preventDefault(); justDragged = false; }
+  }, true);
+
+  function start() {
+    clearTimeout(timer);
+    if (!pending) return;
+    drag = { el: pending.el, id: pending.id, x: pending.x, y: pending.y, copy: false, drop: null, ghost: document.createElement('div') };
+    pending = null;
+    drag.ghost.className = 'drag-ghost';
+    document.body.appendChild(drag.ghost);
+    document.body.classList.add('dragging');
+    drag.el.classList.add('drag-src');
+    navigator.vibrate?.(15);
+    update();
+  }
+  function move(e) {
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    drag.copy = e.ctrlKey || e.altKey || e.metaKey;
+    update();
+    autoScroll();
+  }
+  function update() {
+    opts.clear();
+    drag.drop = opts.over(drag.el, document.elementFromPoint(drag.x, drag.y), drag.x, drag.y, drag.copy);
+    drag.ghost.textContent = opts.label(drag.el, drag.drop);
+    drag.ghost.style.left = drag.x + 14 + 'px';
+    drag.ghost.style.top = drag.y + 14 + 'px';
+  }
+  function autoScroll() {   // 가장자리로 끌고 가면 저절로 굴러가요
+    const s = opts.scroller(), r = s.getBoundingClientRect(), edge = 36, step = 14;
+    if (drag.y < r.top + edge) s.scrollTop -= step; else if (drag.y > r.bottom - edge) s.scrollTop += step;
+    if (drag.x < r.left + edge) s.scrollLeft -= step; else if (drag.x > r.right - edge) s.scrollLeft += step;
+  }
+  function finish(ok) {
+    const d = drag;
+    drag = null;
+    d.ghost.remove();
+    document.body.classList.remove('dragging');
+    d.el.classList.remove('drag-src');
+    opts.clear();
+    justDragged = true;
+    setTimeout(() => { justDragged = false; }, 0);
+    if (ok && d.drop) opts.drop(d.el, d.drop);
+  }
+}
+
+// ----- 왼쪽 목록: 메모를 폴더로 끌어 넣기 -----
+function moveNoteToFolder(id, folderId) {
+  const note = getNote(id);
+  if (!note || (folderOf(note)?.id || '') === folderId) return;
+  note.folder = folderId;
+  note.updated = Date.now();
+  if (folderId) { collapsed.delete(folderId); saveCollapsed(); }
+  saveNow();
+  renderList();
+  if (id === currentId) renderFolderSel();
+  const name = note.title || '(제목 없음)';
+  toast(folderId ? `"${name}"을(를) 📁 ${getFolder(folderId).name} 폴더에 넣었어요` : `"${name}"을(를) 폴더 밖으로 꺼냈어요`);
+}
+
+// 폴더를 다른 폴더 안으로 (folderId가 ''이면 맨 위로)
+function moveFolderInto(id, folderId) {
+  const f = getFolder(id);
+  if (!f || parentIdOf(f) === folderId) return;
+  if (folderId && isFolderInside(folderId, id)) return toast('폴더를 자기 안으로 넣을 수는 없어요');
+  if (folderNameTaken(f.type, f.name, f.id, folderId)) return toast('그 자리에 같은 이름의 폴더가 이미 있어요');
+  f.parent = folderId;
+  f.updated = Date.now();
+  if (folderId) { collapsed.delete(folderId); saveCollapsed(); }
+  saveNow();
+  renderList();
+  if (currentId) renderFolderSel();
+  toast(folderId ? `📁 ${f.name} 폴더를 📁 ${getFolder(folderId).name} 안으로 옮겼어요` : `📁 ${f.name} 폴더를 맨 위로 꺼냈어요`);
+}
+
+enableDrag($('list'), {
+  item: 'li[data-id], .folder-head',   // 메모도, 폴더도 끌 수 있어요
+  // 종류를 골라서 폴더가 보일 때만 끌 수 있어요
+  canDrag: () => filter !== 'all' && !$('search').value.trim() && !folderEdit,
+  scroller: () => $('list'),
+  over(el, target) {
+    if (!target?.closest('#list')) return null;
+    const zone = target.closest('[data-folder]');   // 폴더 줄이나 폴더 안 메모 위면 그 폴더, 아니면 "맨 위(폴더 밖)"
+    const folderId = zone ? zone.dataset.folder : '';
+    const dragFolder = el.classList.contains('folder-head') ? el.dataset.folder : null;
+    if (dragFolder && folderId && isFolderInside(folderId, dragFolder)) return null;   // 자기 안으로는 못 넣어요
+    if (folderId) document.querySelector(`#list .folder-head[data-folder="${folderId}"]`)?.classList.add('drop-target');
+    else $('list').classList.add('drop-target');
+    return { folderId };
+  },
+  clear() {
+    document.querySelectorAll('#list .drop-target').forEach(x => x.classList.remove('drop-target'));
+    $('list').classList.remove('drop-target');
+  },
+  label(el, drop) {
+    const isFolder = el.classList.contains('folder-head');
+    const what = isFolder ? `📁 ${getFolder(el.dataset.folder)?.name}` : `📄 ${getNote(el.dataset.id)?.title || '(제목 없음)'}`;
+    if (!drop) return what;
+    return drop.folderId ? `${what}  →  📁 ${getFolder(drop.folderId)?.name}` : `${what}  →  ${isFolder ? '맨 위로' : '폴더 밖으로'}`;
+  },
+  drop: (el, drop) => el.classList.contains('folder-head')
+    ? moveFolderInto(el.dataset.folder, drop.folderId)
+    : moveNoteToFolder(el.dataset.id, drop.folderId),
+});
+
+// ----- 마인드맵: 카드를 끌어서 연결 바꾸기 -----
+const nodeTitle = id => id.startsWith('missing:') ? id.slice(id.indexOf('|') + 1) : (getNote(id)?.title.trim() || '');
+function isMapDescendant(id, ancestor) {
+  for (let p = id; mapTree.parent.has(p);) { p = mapTree.parent.get(p); if (p === ancestor) return true; }
+  return false;
+}
+
+// 메모 내용에서 [[제목]] 연결 끊기: "- [[제목]]" 한 줄은 통째로 지우고, 문장 속 링크는 글자만 남겨요
+function unlinkTitle(content, title) {
+  return content.split('\n')
+    .filter(line => { const m = line.match(/^\s*[-*]\s*\[\[([^\[\]\n]+?)\]\]\s*$/); return !(m && sameTitle(m[1], title)); })
+    .join('\n')
+    .replace(LINK_RE, (m, t) => sameTitle(t, title) ? t.trim() : m);
+}
+// 메모 내용에 "- [[제목]]" 한 줄 넣기. anchor가 있으면 그 메모 링크가 있는 줄 바로 위/아래에 넣어요
+function insertLink(content, title, anchor) {
+  const line = `- [[${title}]]`;
+  const lines = content.replace(/\s+$/, '').split('\n');
+  if (anchor) {
+    const i = lines.findIndex(l => linksIn({ content: l }).some(t => sameTitle(t, anchor.title)));
+    if (i >= 0) { lines.splice(anchor.after ? i + 1 : i, 0, line); return lines.join('\n'); }
+  }
+  return (content.trim() ? content.replace(/\s+$/, '') + '\n' : '') + line;
+}
+
+function rewireInMap(sid, { tid, where, copy }) {
+  const srcTitle = nodeTitle(sid);
+  if (!srcTitle) return toast('제목이 없는 메모는 옮길 수 없어요. 먼저 제목을 적어 주세요');
+  const oldParentId = mapTree.parent.get(sid);
+  const newParentId = where === 'child' ? realize(tid) : mapTree.parent.get(tid);
+  const anchor = where === 'child' ? null : { title: nodeTitle(tid), after: where === 'after' };
+  const newParent = getNote(newParentId);
+  const alreadyLinked = linksIn(newParent).some(t => sameTitle(t, srcTitle));
+  if (where === 'child' && alreadyLinked && (copy || oldParentId === newParentId)) return toast('이미 그 아래에 연결돼 있어요');
+
+  const before = new Map();   // 되돌리기용: 고치기 전 내용
+  const edit = (note, fn) => {
+    if (!before.has(note.id)) before.set(note.id, { content: note.content, updated: note.updated });
+    note.content = fn(note.content);
+  };
+  // 1) 예전 부모와의 연결 끊기 (Ctrl을 누르고 놓았으면 그대로 둬요)
+  const src = getNote(sid), oldParent = getNote(oldParentId);
+  if (!copy && oldParent) {
+    if (linksIn(oldParent).some(t => sameTitle(t, srcTitle))) edit(oldParent, c => unlinkTitle(c, srcTitle));
+    if (src && oldParent.title.trim() && linksIn(src).some(t => sameTitle(t, oldParent.title))) edit(src, c => unlinkTitle(c, oldParent.title));
+  }
+  // 2) 새 부모에 연결 넣기 (같은 단계로 놓았으면 그 카드 바로 위/아래 자리에)
+  if (where !== 'child' && alreadyLinked) edit(newParent, c => unlinkTitle(c, srcTitle));   // 자리를 옮기려고 먼저 빼요
+  if (!(where === 'child' && alreadyLinked)) edit(newParent, c => insertLink(c, srcTitle, anchor));
+
+  const now = Date.now();
+  for (const id of before.keys()) getNote(id).updated = now;
+  mapDepth = Math.max(mapDepth, (mapTree.level.get(newParentId) ?? 0) + 1);
+  if (src) mapSel = sid;
+  saveNow();
+  renderMap();
+  renderList();
+  renderBacklinks();
+  focusMap();
+  const msg = copy ? `"${srcTitle}"을(를) "${newParent.title}"에도 연결했어요`
+    : where === 'child' ? `"${srcTitle}"을(를) "${newParent.title}" 아래로 옮겼어요`
+    : `"${srcTitle}"을(를) "${anchor.title}" ${where === 'before' ? '위' : '아래'}로 옮겼어요`;
+  toast(msg, '되돌리기', () => {
+    for (const [id, b] of before) { const n = getNote(id); if (n) { n.content = b.content; n.updated = Date.now(); } }
+    saveNow();
+    renderMap();
+    renderList();
+    renderBacklinks();
+  });
+}
+
+enableDrag($('mapCanvas'), {
+  item: '.mm-node',
+  canDrag: el => !mapEdit && el.dataset.id !== currentId && el.dataset.id !== 'pending',   // 맨 앞 카드는 못 옮겨요
+  scroller: () => $('mapCanvas'),
+  over(el, target, x, y, copy) {
+    const node = target?.closest?.('#mapCanvas .mm-node');
+    if (!node) return null;
+    const sid = el.dataset.id, tid = node.dataset.id;
+    if (tid === sid || tid === 'pending' || isMapDescendant(tid, sid)) return null;   // 자기 자신이나 자기 아래로는 못 놓아요
+    const r = node.querySelector('rect').getBoundingClientRect();
+    let where = 'child';
+    if (tid !== currentId) {   // 카드의 위쪽 30% → 위에 같은 단계, 아래쪽 30% → 아래에 같은 단계, 가운데 → 하위
+      const f = (y - r.top) / r.height;
+      if (f < 0.3) where = 'before'; else if (f > 0.7) where = 'after';
+    }
+    if (where === 'child') node.classList.add('drop-child');
+    else {
+      const bar = $('dropBar');
+      bar.hidden = false;
+      Object.assign(bar.style, { left: r.left + 'px', width: r.width + 'px', top: (where === 'before' ? r.top - 6 : r.bottom + 2) + 'px' });
+    }
+    return { tid, where, copy };
+  },
+  clear() {
+    document.querySelectorAll('.mm-node.drop-child').forEach(x => x.classList.remove('drop-child'));
+    $('dropBar').hidden = true;
+  },
+  label(el, drop) {
+    const s = nodeTitle(el.dataset.id) || '(제목 없음)';
+    if (!drop) return s;
+    const t = nodeTitle(drop.tid);
+    const how = drop.where === 'child' ? `"${t}" 아래로` : `"${t}" ${drop.where === 'before' ? '위' : '아래'}에 같은 단계로`;
+    return `${s}  →  ${how}${drop.copy ? ' (연결만 추가)' : ''}`;
+  },
+  drop: (el, drop) => rewireInMap(el.dataset.id, drop),
+});
+
+// =====================================================
 //  10. 다른 기기와 맞추기 (동기화)
 //  실제로 인터넷에 연결하는 일은 맨 아래 Firebase 부분이 해요.
 //  여기서는 "무엇이 바뀌었는지" 비교하고, 받은 메모를 합치는 규칙만 정해요.
@@ -1169,7 +1492,7 @@ const sync = {
 const cleanNote = d => ({ id: String(d.id), type: d.type in TYPES ? d.type : 'fleeting', title: String(d.title || ''),
   content: String(d.content || ''), folder: String(d.folder || ''), created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
 const cleanFolder = d => ({ id: String(d.id), type: d.type in TYPES ? d.type : 'fleeting', name: String(d.name || ''),
-  created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
+  parent: String(d.parent || ''), created: Number(d.created) || 0, updated: Number(d.updated) || 0 });
 // 메모와 폴더를 같은 규칙으로 다루기 위한 설명서
 const KINDS = {
   notes:   { prefix: '',        clean: cleanNote,   get: () => notes,   set: v => { notes = v; } },
