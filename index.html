@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>나의 메모 상자</title>
+<title>Zettelkasten</title>
 <style>
   /* ===== 색깔 정하기 (밝은 화면 / 어두운 화면) ===== */
   :root {
@@ -46,7 +46,11 @@
   #list li { padding: 9px 10px; border-radius: 8px; cursor: pointer; }
   #list li:hover { background: var(--hover); }
   #list li.active { background: var(--accent-soft); }
-  #list .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #list .t { font-weight: 600; display: flex; gap: 6px; align-items: baseline; }
+  #list .t .tt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #list .t .meta { flex-shrink: 0; font-size: 11px; font-weight: 400; color: var(--muted); }
+  .sort-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .sort-row select { flex: 1; min-width: 0; padding: 3px 6px; font-size: 12px; }
   #list .s { color: var(--muted); font-size: 12px; margin-top: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sidebar-foot { display: flex; gap: 6px; }
@@ -187,10 +191,20 @@
 <body>
 <div class="app" id="app">
   <aside class="sidebar">
-    <div class="brand">🗂️ 나의 메모 상자</div>
+    <div class="brand">🗂️ Zettelkasten</div>
     <button id="newBtn" class="primary">+ 새 메모</button>
     <input id="search" type="search" placeholder="🔍 제목이나 내용으로 검색">
     <div class="filters" id="filters"></div>
+    <label class="sort-row muted">정렬
+      <select id="sortSel">
+        <option value="updated">✏️ 최근 고친 순</option>
+        <option value="created">🆕 최근 만든 순</option>
+        <option value="oldest">📅 오래된 순 (만든 날)</option>
+        <option value="title">🔤 제목 가나다순</option>
+        <option value="links">🔗 연결 많은 순</option>
+        <option value="lonely">🏝️ 외톨이 먼저 (연결 적은 순)</option>
+      </select>
+    </label>
     <ul id="list"></ul>
     <div class="sync" id="syncBox"><span id="syncText">☁️ 확인 중…</span><button id="syncBtn" hidden></button></div>
     <div class="sidebar-foot">
@@ -261,7 +275,7 @@ const STORAGE_KEY = 'memo-box-notes-v1';   // 브라우저 창고에 붙이는 �
 const TYPES = {
   fleeting:   { label: '임시', icon: '💭' },
   literature: { label: '문헌', icon: '📚' },
-  permanent:  { label: '영구', icon: '💎' },
+  permanent:  { label: '보관', icon: '💎' },
   index:      { label: '목차', icon: '🧭' },
 };
 const LINK_RE = /\[\[([^\[\]\n]+?)\]\]/g;    // [[메모 제목]] 을 찾는 규칙
@@ -324,7 +338,7 @@ function sampleNotes() {
   const now = new Date('2026-10-24T09:00:00').getTime();
   return [
     { id: '20261024090000', type: 'index', title: '사용법',
-      content: '# 나의 메모 상자에 오신 걸 환영해요!\n\n' +
+      content: '# Zettelkasten에 오신 걸 환영해요!\n\n' +
         '- 메모 하나에는 **생각 하나만** 적어요.\n' +
         '- 다른 메모와 연결하려면 [[ 를 치고 제목을 골라요.\n' +
         '- 메모 아래쪽 🔙 칸에서 **이 메모를 가리키는 메모들**을 볼 수 있어요.\n' +
@@ -431,6 +445,51 @@ function renderFilters() {
 // 목록의 메모 한 줄. 폴더별로 묶지 않을 때(전체·검색)는 미리보기 앞에 폴더 이름을 붙여요
 const indent = depth => `style="padding-left:${8 + depth * 16}px"`;   // 폴더 층마다 조금씩 들여 써요
 
+// ----- 정렬 -----
+const SORT_KEY = 'memo-box-sort-v1';   // 고른 정렬은 기기마다 기억해요
+let sortMode = (() => { try { return localStorage.getItem(SORT_KEY) || 'updated'; } catch { return 'updated'; } })();
+
+// 메모마다 연결된 메모 수 (내가 가리키는 메모 + 나를 가리키는 메모, 겹치면 한 번만)
+function linkCounts() {
+  const byTitle = new Map(notes.filter(n => n.title.trim()).map(n => [n.title.trim().toLowerCase(), n.id]));
+  const nb = new Map(notes.map(n => [n.id, new Set()]));
+  for (const n of notes) {
+    for (const t of linksIn(n)) {
+      const other = byTitle.get(t.toLowerCase());
+      if (other && other !== n.id) { nb.get(n.id).add(other); nb.get(other).add(n.id); }
+    }
+  }
+  return new Map([...nb].map(([id, s]) => [id, s.size]));
+}
+
+let counts = null;   // 연결 순으로 정렬할 때만 계산해요
+function sortNotes(list) {
+  counts = ['links', 'lonely'].includes(sortMode) ? linkCounts() : null;
+  const byUpdated = (a, b) => b.updated - a.updated;
+  const cmp = {
+    updated: byUpdated,
+    created: (a, b) => b.created - a.created || byUpdated(a, b),
+    oldest: (a, b) => a.created - b.created || byUpdated(a, b),
+    title: (a, b) => (a.title.trim() || '￿').localeCompare(b.title.trim() || '￿', 'ko') || byUpdated(a, b),   // 제목 없는 메모는 맨 뒤
+    links: (a, b) => counts.get(b.id) - counts.get(a.id) || byUpdated(a, b),
+    lonely: (a, b) => counts.get(a.id) - counts.get(b.id) || byUpdated(a, b),
+  }[sortMode] || byUpdated;
+  return list.sort(cmp);
+}
+
+// 목록 오른쪽에 작게: 날짜순이면 날짜, 연결순이면 연결 수
+function shortDate(t) {
+  const d = new Date(t), now = new Date(), p = n => String(n).padStart(2, '0');
+  if (d.toDateString() === now.toDateString()) return `${p(d.getHours())}:${p(d.getMinutes())}`;
+  return d.getFullYear() === now.getFullYear() ? `${d.getMonth() + 1}.${d.getDate()}` : `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}
+function noteMeta(n) {
+  if (counts) return `🔗 ${counts.get(n.id) ?? 0}`;
+  if (sortMode === 'created' || sortMode === 'oldest') return shortDate(n.created);
+  if (sortMode === 'updated') return shortDate(n.updated);
+  return '';
+}
+
 function noteItem(n, q, inFolder, depth = 1) {
   let snippet = n.content.split('\n').find(l => l.trim()) || '';
   if (q) {   // 검색 중이면 찾은 단어 주변 글을 보여 주기
@@ -440,7 +499,7 @@ function noteItem(n, q, inFolder, depth = 1) {
   const f = folderOf(n);
   if (f && !inFolder) snippet = `📁 ${folderPath(f)} · ${snippet}`;
   return `<li data-id="${n.id}" ${inFolder && f ? `data-folder="${f.id}" ${indent(depth + 0.6)}` : ''} class="${n.id === currentId ? 'active' : ''}${inFolder ? ' in-folder' : ''}">
-    <div class="t">${TYPES[n.type].icon} ${esc(n.title) || '<span class="muted">(제목 없음)</span>'}</div>
+    <div class="t"><span class="tt">${TYPES[n.type].icon} ${esc(n.title) || '<span class="muted">(제목 없음)</span>'}</span><span class="meta">${noteMeta(n)}</span></div>
     <div class="s">${esc(snippet)}</div></li>`;
 }
 
@@ -448,10 +507,9 @@ let renderingList = false;   // 목록을 다시 그리는 중에는 입력칸�
 function renderList() {
   renderFilters();
   const q = $('search').value.trim().toLowerCase();
-  const shown = notes
+  const shown = sortNotes(notes
     .filter(n => filter === 'all' || n.type === filter)
-    .filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q))
-    .sort((a, b) => b.updated - a.updated);
+    .filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)));
 
   let html;
   if (filter !== 'all' && !q) html = folderTreeHtml(shown);   // 종류를 고르면 폴더별로 묶어서 보여 줘요
@@ -837,11 +895,10 @@ function finishMapEdit(edit, text, thenChild) {
     const note = getNote(edit.id), other = findByTitle(text);
     if (other && other.id !== note.id) toast('같은 제목의 메모가 이미 있어요');
     else if (text !== note.title) {
-      const changed = relinkTitle(note.title, text, note.id);
+      relinkTitle(note.title, text, note.id);   // 연결된 메모도 조용히 함께 바꿔요
       note.title = text;
       if (note.id === currentId) titleBeforeEdit = text;   // 연결은 방금 바꿨으니 다시 바꾸지 않게
       note.updated = Date.now();
-      if (changed) toast(`다른 메모에 있던 연결 ${changed}개도 새 제목으로 바꿨어요`);
     }
   }
   saveNow();
@@ -1155,6 +1212,12 @@ $('filters').addEventListener('click', e => {
   if (b) { filter = b.dataset.type; folderEdit = null; folderArm = null; renderList(); }
 });
 $('search').addEventListener('input', renderList);
+$('sortSel').value = sortMode;
+$('sortSel').addEventListener('change', () => {
+  sortMode = $('sortSel').value;
+  try { localStorage.setItem(SORT_KEY, sortMode); } catch { /* 괜찮아요 */ }
+  renderList();
+});
 
 $('newBtn').addEventListener('click', () => {
   const note = createNote('', filter in TYPES ? filter : 'fleeting');
@@ -1202,7 +1265,7 @@ $('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ version: 2, notes, folders }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `메모상자-백업-${makeId().slice(0, 8)}.json`;
+  a.download = `Zettelkasten-백업-${makeId().slice(0, 8)}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
   toast(`메모 ${notes.length}개를 파일로 저장했어요`);
@@ -1235,7 +1298,7 @@ $('importInput').addEventListener('change', async e => {
     if (currentId) openNote(currentId);
     toast(`새 메모 ${added}개, 더 최신으로 바뀐 메모 ${replaced}개`);
   } catch {
-    toast('⚠️ 메모 상자 백업 파일이 아니에요');
+    toast('⚠️ Zettelkasten 백업 파일이 아니에요');
   }
 });
 
