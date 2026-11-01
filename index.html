@@ -42,7 +42,7 @@
     --index: #586C4F;      --index-ink: #F1EBDD;
 
     /* 폴더 색 (채도 낮고 밝은 열한 가지) */
-    --f-sage: #D2DAC6; --f-olive: #DEDCBE; --f-moss: #C9D4BF;
+    --f-sage: #D2DAC6; --f-olive: #DEDCBE; --f-moss: #BFDAD2;   /* 이름은 moss지만 sage와 헷갈리지 않게 푸른 민트색 */
     --f-blue: #D0DDE3; --f-slate: #CED3DF; --f-lavender: #DCD7E6; --f-mauve: #E0D0D5;
     --f-rose: #ECD9D3; --f-clay: #E7CDBF; --f-ochre: #EBDAB3; --f-sand: #EDE5D2;
 
@@ -105,7 +105,17 @@
   .t-permanent { background-color: var(--permanent); color: var(--permanent-ink); }
   .t-index { background-color: var(--index); color: var(--index-ink); }
 
-  .sort { display: flex; align-items: center; justify-content: space-between; font-size: 12px; opacity: .85; margin: 0 4px 10px; }
+  /* 목록 위 한 줄: Select ……… Sort [정렬]  /  고르는 중: 3 selected · All · Delete · Done */
+  .list-bar, .sel-bar { display: flex; align-items: center; gap: 6px; margin: 0 4px 10px; min-height: 22px; }
+  .list-bar[hidden], .sel-bar[hidden] { display: none; }
+  .list-bar { justify-content: space-between; }
+  .sel-count { flex: 1; font-family: var(--en); font-size: 12px; font-weight: 700; }
+  .bar-btn { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; padding: 2px 6px; opacity: .85;
+    border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+  .bar-btn:hover { opacity: 1; border-color: rgba(42, 38, 33, .3); background: rgba(255, 255, 255, .5); }
+  .bar-btn:disabled { opacity: .35; pointer-events: none; }
+  .bar-btn.armed { opacity: 1; background: var(--clay-text); border-color: var(--clay-text); color: #fff; }
+  .sort { display: flex; align-items: center; gap: 8px; font-size: 12px; opacity: .85; }
   .sort select { background: transparent; border: none; border-bottom: 1px solid currentColor; font-size: 12px; padding: 2px 0; outline: none; }
   .sort select option { color: var(--ink); }
 
@@ -150,6 +160,16 @@
     background-color: var(--paper); background-image: var(--grain); color: var(--ink); border-left: 3px solid var(--k, transparent); }
   .slip:hover { box-shadow: 0 1px 1px rgba(60, 45, 25, .1), 0 6px 14px rgba(60, 45, 25, .12); }
   .slip.active { outline: 1.5px solid #494643; outline-offset: -1.5px; }   /* 버튼 색(--ink-btn)보다 채도를 조금 낮춘 테두리 */
+  /* 여러 장 고르기: 쪽지 왼쪽에 동그라미, 고르면 채워지고 ✓ */
+  #list.selecting .slip { padding-left: 36px; }
+  #list.selecting .slip::before { content: ''; position: absolute; left: 11px; top: 50%; width: 15px; height: 15px; margin-top: -9px;
+    border: 1.5px solid var(--ink-soft); border-radius: 50%; background: var(--paper); }
+  #list.selecting .slip.checked::before { background: var(--ink-btn); border-color: var(--ink-btn); }
+  #list.selecting .slip.checked::after { content: ''; position: absolute; left: 17px; top: 50%; width: 4px; height: 8px; margin-top: -7px;
+    border: solid #fff; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+  #list.selecting .slip.checked { outline: 1.5px solid #494643; outline-offset: -1.5px; }
+  #list.selecting .slip.active:not(.checked) { outline: none; }
+  #list.selecting .new-row, #list.selecting .drag-tip { display: none; }
   .slip .row { display: flex; align-items: baseline; gap: 8px; }
   .slip .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
@@ -347,16 +367,25 @@
       <div id="sheets"></div>
       <div class="sheet big" id="bigSheet">
         <div class="tab" id="bigTab"></div>
-        <label class="sort"><span>Sort</span>
-          <select id="sortSel">
-            <option value="updated">Recently edited</option>
-            <option value="created">Recently created</option>
-            <option value="oldest">Oldest first</option>
-            <option value="title">Title A–Z</option>
-            <option value="links">Most linked</option>
-            <option value="lonely">Unlinked first</option>
-          </select>
-        </label>
+        <div class="list-bar" id="listBar">
+          <button class="bar-btn" id="selectBtn" title="여러 메모를 골라 한꺼번에 지우기 (Ctrl+클릭 · Shift+클릭으로도 골라요)">Select</button>
+          <label class="sort"><span>Sort</span>
+            <select id="sortSel">
+              <option value="updated">Recently edited</option>
+              <option value="created">Recently created</option>
+              <option value="oldest">Oldest first</option>
+              <option value="title">Title A–Z</option>
+              <option value="links">Most linked</option>
+              <option value="lonely">Unlinked first</option>
+            </select>
+          </label>
+        </div>
+        <div class="sel-bar" id="selBar" hidden>
+          <span class="sel-count" id="selCount">0 selected</span>
+          <button class="bar-btn" id="selAllBtn" title="지금 목록에 보이는 메모를 모두 고르기">All</button>
+          <button class="bar-btn" id="bulkDeleteBtn" title="고른 메모 지우기 (Delete 키)">Delete</button>
+          <button class="bar-btn" id="selDoneBtn" title="고르기 끝내기 (Esc)">Done</button>
+        </div>
         <ul id="list"></ul>
       </div>
     </div>
@@ -463,6 +492,10 @@ let currentId = null;
 let filter = 'all';
 let mode = 'edit';
 let titleBeforeEdit = '';
+let selecting = false;         // 여러 장 고르기 중인지
+const selected = new Set();    // 고른 메모 번호들
+let lastPicked = null;         // Shift+클릭으로 범위를 고를 때 시작점
+let bulkTimer = null;          // 한꺼번에 지우기 "정말요?" 확인 시간
 
 // =====================================================
 //  2. 저장하기 / 불러오기 (브라우저 안의 작은 창고)
@@ -692,7 +725,7 @@ function noteItem(n, q, inFolder, depth = 1) {
   if (f && !inFolder) snippet = `${folderPath(f)} · ${snippet}`;
   // 왼쪽 가는 색 띠: 폴더 안이면 폴더 색, 전체·검색 목록이면 메모 종류 색
   const strip = f ? `var(--f-${colorOf(f)})` : (filter === 'all' || q) ? `var(--${n.type})` : 'transparent';
-  return `<li data-id="${n.id}" ${inFolder && f ? `data-folder="${f.id}"` : ''} class="slip${n.id === currentId ? ' active' : ''}"
+  return `<li data-id="${n.id}" ${inFolder && f ? `data-folder="${f.id}"` : ''} class="slip${n.id === currentId ? ' active' : ''}${selected.has(n.id) ? ' checked' : ''}"
     style="--k:${strip};${inFolder ? `margin-left:${(depth + 1) * 18}px` : ''}">
     <div class="row"><span class="title">${esc(n.title) || '<span class="untitled">(Untitled)</span>'}</span><span class="meta">${noteMeta(n)}</span></div>
     <div class="snip">${esc(snippet)}</div></li>`;
@@ -715,7 +748,9 @@ function renderList() {
 
   renderingList = true;
   $('list').innerHTML = html;
+  $('list').classList.toggle('selecting', selecting);
   renderingList = false;
+  updateSelBar();
   const input = $('folderInput');
   if (input) {
     input.focus();
@@ -1113,6 +1148,7 @@ function focusMap() { if (!mapEdit) $('mapCanvas').focus({ preventScroll: true }
 // 고르기만 할 때는 다시 그리지 않고 테두리만 바꿔요
 // (다시 그리면 상자가 새로 바뀌어서 두 번째 클릭이 더블클릭으로 인식되지 않아요)
 function selectNode(id) {
+  if (mapSel !== id) resetDeleteBtn();   // "지울까요?" 중에 다른 카드를 고르면 처음부터 다시
   mapSel = id;
   document.querySelectorAll('#mapCanvas .mm-node').forEach(g => g.classList.toggle('sel', g.dataset.id === id));
   document.querySelector('#mapCanvas .mm-node.sel')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -1128,17 +1164,19 @@ function realize(id) {
   return note.id;
 }
 
-function startChild(id) {
+// from: 새 메모가 따라갈 폴더의 주인 (하위 메모면 고른 카드, 형제 메모면 그 형제 카드)
+function startChild(id, from = id) {
   const l = mapTree.level.get(id) ?? 0;
   id = realize(id);
+  if (from.startsWith('missing:')) from = id;
   mapDepth = Math.max(mapDepth, l + 1);   // 새 메모가 보이도록 단계를 늘려요
   mapSel = id;
-  mapEdit = { kind: 'new', parentId: id };
+  mapEdit = { kind: 'new', parentId: id, from };
   renderMap();
 }
 function startSibling(id) {
   if (id === currentId) return startChild(id);   // 맨 앞 메모는 형제가 없으니 하위 메모로
-  startChild(mapTree.parent.get(id));
+  startChild(mapTree.parent.get(id), id);
 }
 function startRename(id) {
   id = realize(id);
@@ -1157,7 +1195,10 @@ function finishMapEdit(edit, text, thenChild) {
     let child = findByTitle(text);
     if (child && child.id === parentNote.id) toast('자기 자신을 하위 메모로 넣을 수는 없어요');
     else {
-      if (!child) child = createNote(text, 'fleeting');
+      if (!child) {   // 새 메모는 고른 카드와 같은 폴더(그 폴더의 종류)로 들어가요. 폴더가 없으면 Fleeting
+        const f = folderOf(getNote(edit.from) || parentNote);
+        child = f ? createNote(text, f.type, f.id) : createNote(text, 'fleeting');
+      }
       // 부모 메모 내용 맨 끝에 "- [[새 메모]]" 를 적어서 연결해요
       if (!linksIn(parentNote).some(t => sameTitle(t, text))) {
         parentNote.content = parentNote.content.replace(/\s+$/, '') + (parentNote.content.trim() ? '\n' : '') + `- [[${child.title}]]`;
@@ -1218,6 +1259,7 @@ $('mapCanvas').addEventListener('keydown', e => {
   if (e.key === 'Tab' && !e.shiftKey) startChild(id);
   else if (e.key === 'Enter') startSibling(id);
   else if (e.key === 'F2') startRename(id);
+  else if (e.key === 'Delete') $('deleteBtn').click();   // Delete 버튼과 같아요: 한 번 더 누르면 지워져요
   else if (e.key === 'ArrowLeft' && t.parent.has(id)) selectNode(t.parent.get(id));
   else if (e.key === 'ArrowRight' && t.children.get(id)?.length) { const k = t.children.get(id); selectNode(k[Math.floor((k.length - 1) / 2)]); }
   else if (e.key === 'ArrowUp' && sibs.indexOf(id) > 0) selectNode(sibs[sibs.indexOf(id) - 1]);
@@ -1488,12 +1530,97 @@ $('list').addEventListener('click', e => {
   if (e.target.closest('.new-folder')) { folderEdit = { kind: 'new', type: filter, value: '' }; return renderList(); }
   if (e.target.closest('.new-note')) return newNote();   // 지금 고른 종류로, 폴더 없이 새 메모
   const li = e.target.closest('li[data-id]');
-  if (li) openNote(li.dataset.id);
+  if (!li) return;
+  // Ctrl(맥은 Cmd)+클릭이나 Shift+클릭을 하면 바로 고르기를 시작해요. Shift는 지금 열린 메모부터 범위로
+  if (!selecting && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+    startSelecting();
+    if (e.shiftKey && currentId) { selected.add(currentId); lastPicked = currentId; }
+  }
+  if (selecting) pickSlip(li.dataset.id, e.shiftKey);
+  else openNote(li.dataset.id);
 });
+
+// ----- 여러 장 골라서 한꺼번에 지우기 -----
+function startSelecting() {
+  selecting = true;
+  selected.clear();
+  lastPicked = null;
+  folderPalette = null;
+}
+function stopSelecting() {
+  selecting = false;
+  selected.clear();
+  lastPicked = null;
+  renderList();
+}
+function pickSlip(id, range) {
+  const ids = [...document.querySelectorAll('#list .slip')].map(li => li.dataset.id);
+  const a = ids.indexOf(lastPicked), b = ids.indexOf(id);
+  if (range && a >= 0 && b >= 0) ids.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(x => selected.add(x));
+  else selected.has(id) ? selected.delete(id) : selected.add(id);
+  lastPicked = id;
+  renderList();
+}
+function resetBulkDelete() {
+  clearTimeout(bulkTimer);
+  $('bulkDeleteBtn').classList.remove('armed');
+  $('bulkDeleteBtn').textContent = 'Delete';
+}
+function updateSelBar() {
+  for (const id of selected) if (!getNote(id)) selected.delete(id);   // 다른 기기에서 이미 지워진 메모는 빼요
+  $('listBar').hidden = selecting;
+  $('selBar').hidden = !selecting;
+  $('selCount').textContent = `${selected.size} selected`;
+  const visible = [...document.querySelectorAll('#list .slip')].map(li => li.dataset.id);
+  $('selAllBtn').textContent = visible.length && visible.every(id => selected.has(id)) ? 'None' : 'All';
+  $('bulkDeleteBtn').disabled = !selected.size;
+  if (!selected.size) resetBulkDelete();
+}
+$('selectBtn').addEventListener('click', () => { startSelecting(); renderList(); });
+$('selDoneBtn').addEventListener('click', stopSelecting);
+$('selAllBtn').addEventListener('click', () => {
+  const visible = [...document.querySelectorAll('#list .slip')].map(li => li.dataset.id);
+  if (visible.every(id => selected.has(id))) visible.forEach(id => selected.delete(id));
+  else visible.forEach(id => selected.add(id));
+  renderList();
+});
+// 한 번 누르면 "Delete 3?"으로 바뀌고, 3초 안에 한 번 더 누르면 지워요
+$('bulkDeleteBtn').addEventListener('click', () => {
+  const btn = $('bulkDeleteBtn');
+  if (!btn.classList.contains('armed')) {
+    btn.classList.add('armed');
+    btn.textContent = `Delete ${selected.size}?`;
+    bulkTimer = setTimeout(resetBulkDelete, 3000);
+    return;
+  }
+  deleteSelected();
+});
+function deleteSelected() {
+  resetBulkDelete();
+  const gone = notes.map((n, i) => ({ n, i })).filter(x => selected.has(x.n.id));   // 되살릴 때 원래 자리로
+  if (!gone.length) return;
+  const closing = currentId && selected.has(currentId);
+  notes = notes.filter(n => !selected.has(n.id));
+  saveNow();
+  selecting = false;
+  selected.clear();
+  lastPicked = null;
+  if (closing) closeNote(); else renderList();
+  toast(`메모 ${gone.length}개를 지웠어요`, '되돌리기', () => {
+    for (const { n, i } of gone) notes.splice(Math.min(i, notes.length), 0, n);
+    saveNow();
+    renderList();
+    toast(`메모 ${gone.length}개를 되살렸어요`);
+  });
+}
 // 위에 겹친 종이를 누르면 그 종류가 맨 아래 큰 종이로 내려와요
 $('sheets').addEventListener('click', e => {
   const s = e.target.closest('[data-type]');
-  if (s) { filter = s.dataset.type; folderEdit = null; folderArm = null; folderPalette = null; renderList(); $('list').scrollTop = 0; }
+  if (s) {
+    filter = s.dataset.type; folderEdit = null; folderArm = null; folderPalette = null;
+    selected.clear();   // 다른 종류로 가면 안 보이는 메모까지 지우지 않게 고른 것을 비워요
+    renderList(); $('list').scrollTop = 0;
+  }
 });
 $('search').addEventListener('input', renderList);
 $('sortSel').value = sortMode;
@@ -1529,7 +1656,7 @@ $('deleteBtn').addEventListener('click', () => {
     deleteTimer = setTimeout(resetDeleteBtn, 3000);   // 3초 안에 안 누르면 원래대로
     return;
   }
-  deleteCurrentNote();
+  mode === 'map' ? deleteMapNode(mapSel) : deleteCurrentNote();   // 마인드맵에서는 지금 고른 카드를 지워요
 });
 
 // 지금 열린 메모 지우기 (지운 뒤 6초 동안 되돌리기 가능)
@@ -1549,6 +1676,34 @@ function deleteCurrentNote() {
   });
 }
 
+// 마인드맵에서 고른 카드 지우기: 메모를 지우고, 바로 위 카드에 적힌 [[링크]]도 함께 빼요 (되돌리기로 둘 다 살아나요)
+// 아직 없는 메모(빨간 점선)를 고르면 위 카드에서 링크만 빼요
+function deleteMapNode(id) {
+  resetDeleteBtn();
+  if (!id || id === currentId) return deleteCurrentNote();   // 맨 앞 카드는 지금 열린 메모라서 평소처럼 지우기
+  const title = nodeTitle(id);
+  const parent = getNote(mapTree.parent.get(id));
+  const parentBefore = parent && { content: parent.content, updated: parent.updated };
+  if (parent) {
+    parent.content = unlinkTitle(parent.content, title);
+    parent.updated = Date.now();
+  }
+  const note = getNote(id), index = notes.indexOf(note);
+  if (note) notes = notes.filter(n => n.id !== id);
+  saveNow();
+  mapSel = parent?.id || currentId;
+  const redraw = () => { renderList(); renderBacklinks(); renderMeta(); renderMap(); focusMap(); };
+  redraw();
+  toast(note ? `"${title || '(Untitled)'}" 메모를 지웠어요` : `"${title}" 연결을 뺐어요`, '되돌리기', () => {
+    if (note) notes.splice(Math.min(index, notes.length), 0, note);
+    if (parent) Object.assign(parent, parentBefore);
+    saveNow();
+    mapSel = id;
+    redraw();
+    toast('되살렸어요');
+  });
+}
+
 // ----- 단축키 -----
 // Alt+N 새 메모 · Alt+Delete 지우기(바로 지우고 "되돌리기"로 살릴 수 있어요) · Alt+1/2/3 Write/Read/Mind map
 // Alt+F 검색 · Alt+↑/↓ 목록의 이전/다음 메모 · Alt+I 메모 종류 바꾸기 · Esc 색 고르기 닫기/검색 지우기
@@ -1563,15 +1718,22 @@ function openSibling(step) {   // 왼쪽 목록에 보이는 순서대로 이전
   document.querySelector(`#list .slip[data-id="${next}"]`)?.scrollIntoView({ block: 'nearest' });
 }
 document.addEventListener('keydown', e => {
+  // 고르는 중에 Delete 키: 지우기 버튼을 누른 것과 같아요 (두 번 눌러야 지워져요). 글 쓰는 칸에서는 평소처럼
+  const typingHere = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+  if (e.key === 'Delete' && !e.altKey && selecting && selected.size && !typingHere) {
+    e.preventDefault();
+    return $('bulkDeleteBtn').click();
+  }
   if (e.key === 'Escape' && !e.defaultPrevented && !e.altKey) {   // 다른 칸이 Esc를 먼저 쓰지 않았을 때만
-    if (folderPalette) { folderPalette = null; renderList(); }
+    if (selecting) stopSelecting();
+    else if (folderPalette) { folderPalette = null; renderList(); }
     else if ($('search').value) { $('search').value = ''; renderList(); }
     return;
   }
   if (!e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
   const act = {
     KeyN: () => newNote(),
-    Delete: () => currentId && deleteCurrentNote(),
+    Delete: () => currentId && (mode === 'map' ? deleteMapNode(mapSel) : deleteCurrentNote()),
     Digit1: () => currentId && $('editTab').click(),
     Digit2: () => currentId && $('viewTab').click(),
     Digit3: () => currentId && $('mapTab').click(),
@@ -1790,7 +1952,7 @@ document.querySelector('.sidebar').addEventListener('dragstart', e => e.preventD
 enableDrag($('list'), {
   item: 'li[data-id], .folder-head',   // 메모도, 폴더도 끌 수 있어요
   // 종류를 골라서 폴더가 보일 때만 끌 수 있어요
-  canDrag: () => filter !== 'all' && !$('search').value.trim() && !folderEdit,
+  canDrag: () => filter !== 'all' && !$('search').value.trim() && !folderEdit && !selecting,
   scroller: () => $('list'),
   over(el, target) {
     if (!target?.closest('#list')) return null;
