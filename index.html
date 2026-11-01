@@ -215,7 +215,7 @@
   .drop-ring { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 3; }
   .drop-ring path { fill: none; stroke: var(--drop); stroke-width: 2; stroke-linejoin: round; }
   #list.drop-target { outline: 2px dashed var(--drop); outline-offset: -4px; border-radius: 6px; }
-  .mm-node.drop-child rect.box { stroke: var(--ink-btn); stroke-width: 2.5; }
+  .mm-node.drop-child rect.edge { stroke: var(--ink-btn); stroke-width: 2.5; }
   .drop-bar { position: fixed; z-index: 49; height: 4px; background: var(--ink-btn); border-radius: 2px; pointer-events: none; }
 
   /* ===== 오른쪽: 메모 카드 ===== */
@@ -317,14 +317,16 @@
   .mm-edge { stroke: var(--ink); stroke-opacity: .45; stroke-width: 1.2; fill: none; }
   .mm-node { cursor: pointer; filter: drop-shadow(0 2px 2.5px rgba(60, 45, 25, .18)); }
   .mm-node rect.box { fill: var(--paper); stroke: none; }
-  .mm-node:hover rect.box { stroke: var(--edge); stroke-width: 1; }
+  /* 테두리는 색 띠 위에 따로 그려서, 고른 카드의 강조선이 색 띠에 가려지지 않게 해요 */
+  .mm-node rect.edge { fill: none; stroke: none; }
+  .mm-node:hover rect.edge { stroke: var(--edge); stroke-width: 1; }
   .mm-node text { fill: var(--ink); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em;
     dominant-baseline: central; pointer-events: none; }
   .mm-node.root text { font-size: 15px; }
-  .mm-node.sel rect.box { stroke: var(--ink-btn); stroke-width: 2; }
-  .mm-node.missing rect.box { stroke: var(--clay-text); stroke-dasharray: 4 3; stroke-width: 1.2; }
+  .mm-node.sel rect.edge { stroke: var(--ink-btn); stroke-width: 2; }
+  .mm-node.missing rect.edge { stroke: var(--clay-text); stroke-dasharray: 4 3; stroke-width: 1.2; }
   .mm-node.missing text { fill: var(--clay-text); }
-  .mm-node.pending rect.box { stroke: var(--ink-btn); stroke-dasharray: 5 4; }
+  .mm-node.pending rect.edge { stroke: var(--ink-btn); stroke-dasharray: 5 4; }
   .mm-input { position: absolute; box-sizing: border-box; padding: 0 10px; border: 1.5px solid var(--ink-btn); border-radius: 4px; outline: none;
     background: var(--paper); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em; }
   .mm-lonely { fill: var(--ink-soft); font-family: var(--en); font-size: 12px; }
@@ -1109,6 +1111,7 @@ function renderMap() {
     return `<g class="${cls}" data-id="${esc(id)}">
       <title>${esc(i.full)}${i.n || id === 'pending' ? '' : ' (아직 없는 메모 · 더블클릭하면 만들어져요)'}</title>
       <rect class="box" x="${p.x}" y="${top}" width="${i.w}" height="${i.h}" rx="3"${fill}/>${bar}
+      <rect class="edge" x="${p.x}" y="${top}" width="${i.w}" height="${i.h}" rx="3"/>
       <text x="${p.x + 14}" y="${p.y}"${ink}>${esc(i.label)}</text></g>`;
   });
   const width = colX[colX.length - 1] + colW[colW.length - 1] + PAD;
