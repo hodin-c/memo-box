@@ -164,7 +164,10 @@
   .bar-btn:disabled { opacity: .35; pointer-events: none; }
   .bar-btn.armed { opacity: 1; background: var(--clay-text); border-color: var(--clay-text); color: #fff; }
   .sort { display: flex; align-items: center; gap: 8px; font-size: 12px; opacity: .85; }
-  .sort select { background: transparent; border: none; border-bottom: 1px solid currentColor; font-size: 12px; padding: 2px 0; outline: none; }
+  /* 정렬 고르기: 핸드폰 기본 모양(아이폰의 회색 알약 등)을 끄고 밑줄 + 직접 그린 ∨ 표시로. 어느 기기에서나 같은 모양이에요 */
+  .sort select { -webkit-appearance: none; appearance: none; border: none; border-radius: 0; border-bottom: 1px solid currentColor; outline: none;
+    font-family: var(--sans); font-size: 12px; line-height: 1.4; color: inherit; padding: 2px 18px 2px 0; cursor: pointer;
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%234B463F' stroke-width='1.3'/%3E%3C/svg%3E") no-repeat right 3px center; }
   .sort select option { color: var(--ink); }
 
   /* ----- 목록 ----- */
@@ -416,6 +419,9 @@
     .app.show-main .sidebar { display: none; }
     .app.show-main main { display: block; }
     .mobile-only { display: inline-flex !important; }
+    /* 좁은 화면: 버튼 글자가 두 줄로 꺾이지 않게, 대신 로고를 조금 작게 */
+    .brand { font-size: 20px; min-width: 0; white-space: nowrap; }
+    .side-new, .board-btn { white-space: nowrap; flex-shrink: 0; padding-left: 9px; padding-right: 9px; }
     .board { padding: 18px 16px 40px; }
     .board-head .search { width: 100%; order: 3; }
     .board-close { order: 1; margin-left: auto; }   /* 핸드폰에서는 Close를 제목 옆에 */
