@@ -6,15 +6,9 @@
 <title>Zettelkasten</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
 <style>
-  /* 부산단디명조: 부산시 무료 서체. 자주 쓰는 한글 2,350자 + 영문·숫자·기호만 남기고, 장평을 103%로 넓힌 파일 */
-  @font-face { font-family: "Busan Dandi Myeongjo"; font-weight: 400 600; font-display: swap;
-    src: url("fonts/BusanDandiMyeongjo103-M.woff") format("woff"); }
-  @font-face { font-family: "Busan Dandi Myeongjo"; font-weight: 700 900; font-display: swap;
-    src: url("fonts/BusanDandiMyeongjo103-B.woff") format("woff"); }
-
   /* ===== 색과 글꼴 ===== */
   :root {
     /* 종이결: 아주 옅은 입자 + 옅은 얼룩 */
@@ -48,9 +42,9 @@
 
     --brand: "Special Elite", "Courier New", monospace;                          /* 로고 */
     --en: "Courier Prime", "Courier New", monospace;                              /* 영어 메뉴, 날짜, 번호 */
-    --title: "Busan Dandi Myeongjo", "Gowun Batang", serif;                      /* 메모 제목, 폴더 이름 */
     --sans: "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;   /* 본문 */
-    --title-spacing: .11em;
+    --title: var(--sans);       /* 메모 제목도 본문과 같은 Pretendard (읽기 쉽게) */
+    --title-spacing: -.01em;    /* 제목은 살짝 좁게 */
   }
 
   * { box-sizing: border-box; }
@@ -114,7 +108,7 @@
   .tile.active:hover { filter: drop-shadow(1.5px 0 0 var(--ink-btn)) drop-shadow(-1.5px 0 0 var(--ink-btn))
     drop-shadow(0 1.5px 0 var(--ink-btn)) drop-shadow(0 -1.5px 0 var(--ink-btn)) drop-shadow(0 5px 7px rgba(60, 45, 25, .16)); }
   .tile-type { width: 9px; height: 9px; border: 1px solid currentColor; flex-shrink: 0; }
-  .tile-title { margin-top: 10px; font-family: var(--title); font-weight: 700; font-size: 14px; letter-spacing: var(--title-spacing); line-height: 1.4;
+  .tile-title { margin-top: 10px; font-family: var(--title); font-weight: 600; font-size: 14px; letter-spacing: var(--title-spacing); line-height: 1.4;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; }
   .tile-title .untitled { opacity: .55; font-weight: 400; }
   .tile-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between;
@@ -136,7 +130,7 @@
     padding: 16px 12px 8px; border-radius: 4px; cursor: default;
     filter: var(--sheet-shadow) drop-shadow(0 4px 8px rgba(60, 45, 25, .08)); }
   .sheet .tab { position: absolute; top: -24px; height: 24px; padding: 0 14px; display: flex; align-items: center; gap: 8px;
-    background: inherit; white-space: nowrap; font-family: var(--en); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+    background: inherit; white-space: nowrap; font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
   /* 탭 양옆 어깨: 아래는 종이와, 위는 탭 윗면과 수평으로 만나는 S자 곡선 */
   .sheet .tab::before, .sheet .tab::after { content: ''; position: absolute; top: 0; bottom: 0; width: 20px; background: inherit;
     -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
@@ -156,7 +150,9 @@
   /* 목록 위 한 줄: Select ……… Sort [정렬]  /  고르는 중: 3 selected · All · Delete · Done */
   .list-bar, .sel-bar { display: flex; align-items: center; gap: 6px; margin: 0 4px 10px; min-height: 22px; }
   .list-bar[hidden], .sel-bar[hidden] { display: none; }
-  .list-bar { justify-content: space-between; }
+  /* Select 글자는 카드 왼쪽 끝에, Sort는 카드 오른쪽 끝에 맞추고, 둘의 글자 밑선(기준선)을 같은 높이로 */
+  .list-bar { justify-content: space-between; align-items: baseline; margin-left: 0; margin-right: 0; }
+  .list-bar .bar-btn { margin-left: -7px; }   /* 버튼 안쪽 여백(6px)+테두리(1px)만큼 당겨서 글자가 카드 끝과 나란히 */
   .sel-count { flex: 1; font-family: var(--en); font-size: 12px; font-weight: 700; }
   .bar-btn { font-family: var(--en); font-weight: 700; font-size: 11px; letter-spacing: .08em; padding: 2px 6px; opacity: .85;
     border: 1px solid transparent; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
@@ -227,7 +223,7 @@
   .sheet.t-index #list.selecting .slip.active:not(.checked), .sheet.t-literature #list.selecting .slip.active:not(.checked) { outline: none; }
   .slip .row { display: flex; align-items: baseline; gap: 8px; }
   .slip .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-family: var(--title); font-weight: 700; font-size: 13.5px; letter-spacing: var(--title-spacing); }
+    font-family: var(--title); font-weight: 600; font-size: 13.5px; letter-spacing: var(--title-spacing); }
   .slip .title .untitled { color: var(--ink-soft); font-weight: 400; }
   .slip .meta { font-family: var(--en); font-size: 11px; color: var(--ink-soft); flex-shrink: 0; }
   .slip .snip { font-size: 12px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -263,7 +259,7 @@
   /* 끌어서 옮기기 */
   .drag-ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 10px; border-radius: 6px;
     background: var(--paper); border: 1.5px solid var(--ink-btn); box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
-    font-family: var(--title); font-size: 13px; letter-spacing: .05em; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    font-family: var(--title); font-size: 13px; letter-spacing: 0; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.dragging, body.dragging * { cursor: grabbing !important; }
   .drag-src { opacity: .4; }
   /* 끌어서 놓을 곳 표시: 채도 없는 차분한 먹색. 폴더는 탭까지 감싸는 선을 그려요 */
@@ -282,7 +278,7 @@
   .ctab { position: relative; top: 4px; height: 36px; padding: 0 20px; display: flex; align-items: center; gap: 10px;
     border: 1px solid var(--edge); border-bottom: none; border-radius: 10px 10px 0 0;
     background-color: var(--paper-2); background-image: var(--grain); color: var(--ink-soft);
-    font-family: var(--en); font-weight: 700; font-size: 13px; letter-spacing: .08em; }
+    font-family: var(--sans); font-weight: 600; font-size: 13px; letter-spacing: 0; }
   .ctab .k { font-size: 11px; font-weight: 400; opacity: .6; letter-spacing: .02em; }
   /* 고른 탭은 카드 윗줄에 딱 맞게 끝나서 아래로 삐져나오지 않아요 */
   .ctab.on { top: 0; height: 35px; z-index: 2; background-color: var(--paper); color: var(--ink); }
@@ -333,7 +329,7 @@
   .fmt-bar [data-fmt="underline"] .lb { position: relative; top: -1.5px; }
   .preview { min-height: 300px; font-size: 15.5px; line-height: 32px; }
   .preview p { margin: 0 0 16px; }
-  .preview h2, .preview h3, .preview h4 { font-family: var(--title); letter-spacing: .06em; margin: 22px 0 8px; line-height: 1.4; }
+  .preview h2, .preview h3, .preview h4 { font-family: var(--title); letter-spacing: var(--title-spacing); margin: 22px 0 8px; line-height: 1.4; }
   .preview ul, .preview ol { margin: 0 0 16px; padding-left: 24px; }
   .preview li > ul, .preview li > ol { margin: 0; }   /* 들여 쓴 목록은 바로 아래에 붙여서 */
   .preview u { text-underline-offset: 3px; }
@@ -354,7 +350,7 @@
   .ac { position: absolute; z-index: 10; list-style: none; margin: 0; padding: 4px; width: 280px;
     background: var(--paper); border: 1px solid var(--edge); border-radius: 6px; box-shadow: 0 6px 20px rgba(0, 0, 0, .14); }
   .ac li { display: flex; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 4px; cursor: pointer;
-    font-family: var(--title); font-size: 13.5px; letter-spacing: .06em; }
+    font-family: var(--title); font-size: 13.5px; letter-spacing: 0; }
   .ac li .ac-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac li .ac-type { font-family: var(--en); font-weight: 700; font-size: 10px; letter-spacing: .06em; color: var(--ink-soft); }
   .ac li.sel { background: var(--paper-2); }
@@ -367,7 +363,7 @@
   .bcard { padding: 12px 14px; border-radius: 3px; box-shadow: var(--shadow); border-top: 4px solid var(--k);
     background-color: var(--paper); background-image: var(--grain); cursor: pointer; }
   .bcard:hover { box-shadow: 0 1px 1px rgba(60, 45, 25, .1), 0 6px 14px rgba(60, 45, 25, .12); }
-  .bcard .bt { font-family: var(--title); font-weight: 700; font-size: 14px; letter-spacing: var(--title-spacing); }
+  .bcard .bt { font-family: var(--title); font-weight: 600; font-size: 14px; letter-spacing: var(--title-spacing); }
   .bcard .bs { font-size: 12px; color: var(--ink-soft); margin-top: 4px; line-height: 1.5; }
   .bempty { font-size: 13px; color: var(--ink-soft); grid-column: 1 / -1; }
 
@@ -392,14 +388,14 @@
   /* 테두리는 색 띠 위에 따로 그려서, 고른 카드의 강조선이 색 띠에 가려지지 않게 해요 */
   .mm-node rect.edge { fill: none; stroke: none; }
   .mm-node:hover rect.edge { stroke: var(--edge); stroke-width: 1; }
-  .mm-node text { fill: var(--ink); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em;
+  .mm-node text { fill: var(--ink); font-family: var(--title); font-weight: 600; font-size: 13px; letter-spacing: 0;
     dominant-baseline: alphabetic; pointer-events: none; }
   .mm-node.root text { font-size: 15px; }
   .mm-node.sel rect.edge { stroke: #5E554B; stroke-width: 2; }   /* 갈색 기운이 도는, 너무 짙지 않은 강조선 */  .mm-node.missing rect.edge { stroke: var(--clay-text); stroke-dasharray: 4 3; stroke-width: 1.2; }
   .mm-node.missing text { fill: var(--clay-text); }
   .mm-node.pending rect.edge { stroke: var(--ink-btn); stroke-dasharray: 5 4; }
   .mm-input { position: absolute; box-sizing: border-box; padding: 0 10px; border: 1.5px solid var(--ink-btn); border-radius: 4px; outline: none;
-    background: var(--paper); font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .08em; }
+    background: var(--paper); font-family: var(--title); font-weight: 600; font-size: 13px; letter-spacing: 0; }
   .mm-lonely { fill: var(--ink-soft); font-family: var(--en); font-size: 12px; }
 
   /* 알림 */
@@ -853,6 +849,9 @@ function renderList() {
   $('list').innerHTML = html;
   $('list').classList.toggle('selecting', selecting);
   renderingList = false;
+  // 목록에 스크롤 막대가 생기면 카드 오른쪽 끝이 그만큼 안으로 들어와요 → 위쪽 줄(Sort)도 똑같이 맞춰요
+  const sb = $('list').offsetWidth - $('list').clientWidth + 'px';
+  $('listBar').style.paddingRight = $('selBar').style.paddingRight = sb;
   updateSelBar();
   if (!$('board').hidden) renderBoard();   // 다른 기기에서 바뀐 것도 Board에 바로 보여요
   const input = $('folderInput');
@@ -1179,7 +1178,7 @@ function renderMap() {
 
   // 2) 상자마다 글자와 크기 정하기
   const info = new Map();
-  const titleFont = getComputedStyle(document.documentElement).getPropertyValue('--title');
+  const titleFont = getComputedStyle(document.documentElement).getPropertyValue('--sans');   // --title은 var(--sans)라서 실제 글꼴 이름이 든 쪽을 읽어요
   for (const id of level.keys()) {
     const n = getNote(id), isRoot = id === root.id;
     const full = id === 'pending' ? '' : n ? (n.title.trim() || '(Untitled)') : id.slice(id.indexOf('|') + 1);
@@ -1187,9 +1186,9 @@ function renderMap() {
     // 글자 폭을 실제 글꼴로 재서, 왼쪽(MAP_PAD)과 오른쪽 여백이 똑같은 상자로 만들어요
     // (자간은 글자 뒤마다 붙는데, 마지막 글자 뒤 자간은 눈에 안 보이니 빼요)
     const size = isRoot ? 15 : 13;
-    measureCtx.font = `700 ${size}px ${titleFont}`;
+    measureCtx.font = `600 ${size}px ${titleFont}`;   // 카드 글자와 같은 굵기 (자간 0)
     const m = measureCtx.measureText(label);
-    const textW = m.width + size * 0.08 * Math.max(0, [...label].length - 1);
+    const textW = m.width;
     const w = id === 'pending' ? 180 : Math.min(300, Math.round(textW) + MAP_PAD * 2);
     // 글자 모양(잉크)의 위·아래 끝을 재서, 카드 위아래 여백이 똑같도록 기준선 높이를 정해요
     const dy = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
